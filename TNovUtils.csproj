@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{F8CF0557-F13D-4DFA-A817-D2380449A712}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>TNovUtils</RootNamespace>
+    <AssemblyName>TNovUtils</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\TNov\packages\Newtonsoft.Json.13.0.4\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="RevitAPI">
+      <HintPath>C:\Program Files\Autodesk\Revit 2022\RevitAPI.dll</HintPath>
+    </Reference>
+    <Reference Include="RevitAPIUI">
+      <HintPath>C:\Program Files\Autodesk\Revit 2022\RevitAPIUI.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xaml" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+    <Reference Include="WindowsBase" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="CategoryComparer.cs" />
+    <Compile Include="ElementTypeComparer.cs" />
+    <Compile Include="Families\FamilyBrowserWindow.xaml.cs">
+      <DependentUpon>FamilyBrowserWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Families\FamilyCacheItem.cs" />
+    <Compile Include="Families\FamilyCacheManager.cs" />
+    <Compile Include="Families\FamilyInfo.cs" />
+    <Compile Include="Families\FamilyRequestWindow.xaml.cs">
+      <DependentUpon>FamilyRequestWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Families\LoadFamiliesFromServer.cs" />
+    <Compile Include="Families\ProjectListLoader.cs" />
+    <Compile Include="Families\RequestDetailsWindow.xaml.cs">
+      <DependentUpon>RequestDetailsWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Families\RequestModel.cs" />
+    <Compile Include="Families\RequestsListWindow.xaml.cs" />
+    <Compile Include="Families\RequestStorage.cs" />
+    <Compile Include="Families\ResponsibleList.cs" />
+    <Compile Include="Families\RevitContext.cs" />
+    <Compile Include="Families\RoleManager.cs" />
+    <Compile Include="Families\UserNameHelper.cs" />
+    <Compile Include="IdSelection.cs" />
+    <Compile Include="IdSelectionViewModel.cs" />
+    <Compile Include="IdSelectionWPF.xaml.cs">
+      <DependentUpon>IdSelectionWPF.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Links.cs" />
+    <Compile Include="Paint.cs" />
+    <Compile Include="Paint2.cs" />
+    <Compile Include="PLW.cs" />
+    <Compile Include="PLWSettings.cs" />
+    <Compile Include="PLWViewModel.cs" />
+    <Compile Include="PLWWPF.xaml.cs">
+      <DependentUpon>PLWWPF.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="revitpaint.cs" />
+    <Compile Include="revitpaintdel.cs" />
+    <Compile Include="RevitServer.xaml.cs">
+      <DependentUpon>RevitServer.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="RevitServerViewModel.cs" />
+    <Compile Include="revitsplitface.cs" />
+    <Compile Include="TNovPinUpdater.cs" />
+    <Compile Include="TreeBuilder.cs" />
+    <Compile Include="TypeFilter.cs" />
+    <Compile Include="TypeFilterCategoryViewModel.cs" />
+    <Compile Include="TypeFilterElementTypeViewModel.cs" />
+    <Compile Include="TypeFilterWPF.xaml.cs">
+      <DependentUpon>TypeFilterWPF.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Unpinner.cs" />
+    <Compile Include="UnpinnerViewModel.cs" />
+    <Compile Include="UnpinnerWPF.xaml.cs">
+      <DependentUpon>UnpinnerWPF.xaml</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\TNovCommon\TNovCommon.csproj">
+      <Project>{214dc0ec-f948-4bc6-a123-d93abb39ac23}</Project>
+      <Name>TNovCommon</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Page Include="Families\FamilyBrowserWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Families\FamilyRequestWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Families\RequestDetailsWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Families\RequestsListWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="IdSelectionWPF.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="PLWWPF.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="RevitServer.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="TypeFilterWPF.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="UnpinnerWPF.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+  </ItemGroup>
+  <ItemGroup />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>start /d "Z:\DEV\TNovDebug\bin\Release\net9.0" TNovDebug.exe</PostBuildEvent>
+  </PropertyGroup>
+</Project>

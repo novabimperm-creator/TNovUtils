@@ -1,0 +1,116 @@
+﻿<Window x:Class="TNovUtils.PLWWPF"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:TNovUtils"
+             mc:Ignorable="d" Height="230" Width="400"
+        d:DataContext="{d:DesignInstance local:PLWViewModel}"
+            WindowStartupLocation="CenterScreen" 
+            Background="White" BorderBrush="#FF008E43" BorderThickness="1"
+            ResizeMode="NoResize" WindowStyle="None">
+    <Window.Resources>
+        <!-- Стиль с полным шаблоном -->
+        <Style x:Key="CustomButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#F0F0F0"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="BorderBrush" Value="#CCCCCC"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <!-- Убираем SystemColors -->
+                        <ControlTemplate.Resources>
+                            <SolidColorBrush x:Key="{x:Static SystemColors.ControlBrushKey}" 
+                                         Color="Transparent"/>
+                            <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" 
+                                         Color="Transparent"/>
+                        </ControlTemplate.Resources>
+
+                        <Border x:Name="border"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="2">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          Margin="{TemplateBinding Padding}"/>
+                        </Border>
+
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <!-- Прямое указание цвета -->
+                                <Setter TargetName="border" 
+                                    Property="Background" 
+                                    Value="#FF008E43"/>
+                                <!-- Цвет заголовка -->
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" 
+                                    Property="Background" 
+                                    Value="#FF008E43"/>
+                                <!-- Темнее -->
+                            </Trigger>
+
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="border" 
+                                    Property="Opacity" 
+                                    Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="30"
+              ResizeBorderThickness="5"
+              GlassFrameThickness="0"
+              CornerRadius="0"/>
+    </WindowChrome.WindowChrome>
+    <Grid>
+        <!-- Верхняя панель (кастомный заголовок) -->
+        <Border Height="30" 
+                Background="#FF008E43" 
+                VerticalAlignment="Top"
+                MouseDown="Border_MouseDown">
+            <TextBlock Text="TNov - Закреплятор Уровни Наборы" 
+                       Foreground="White"
+                       VerticalAlignment="Center"
+                       Margin="10,0"/>
+        </Border>
+
+        <!-- Основное содержимое -->
+        <Border Margin="0,30,0,0">
+
+            <StackPanel VerticalAlignment="Center" Margin="5">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <TextBlock Margin="5" Text="Выберите сценарий работы:" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <CheckBox BorderBrush="#CCCCCC" x:Name="box1" IsThreeState="False" IsChecked="{Binding pin}" Content="Закрепить оси, уровни, связи" HorizontalAlignment="Left" Width="200" Margin="5" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <CheckBox BorderBrush="#CCCCCC" x:Name="box2" IsThreeState="False" IsChecked="{Binding levels}" Content="Переименовать уровни" HorizontalAlignment="Left" Width="200" Margin="5" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <CheckBox BorderBrush="#CCCCCC" x:Name="box3" IsThreeState="False" IsChecked="{Binding worksets}" Content="Распределить по наборам" HorizontalAlignment="Left" Width="200" Margin="5" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <CheckBox x:Name="checkBoxShow" IsThreeState="False" IsChecked="{Binding show}" Content="Показывать это окно при запуске функции" Width="270" Margin="5" Foreground="#FF008E43" BorderBrush="#FF008E43" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <Button Style="{StaticResource CustomButtonStyle}" Content="Отмена" x:Name="escButton" IsCancel="True" Click="escButton_Click" MinWidth="60" MinHeight="25" Margin="5" />
+                    <Button Style="{StaticResource CustomButtonStyle}" Content="Применить" x:Name="acceptButton" IsDefault="True" Click="acceptButton_Click" MinWidth="120" Margin="5"/>
+                </StackPanel>
+
+            </StackPanel>
+
+        </Border>
+    </Grid>
+
+    
+</Window>
