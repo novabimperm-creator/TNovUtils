@@ -29,37 +29,45 @@ namespace TNovUtils
         }
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
-            string TNovClassName = "Закреплятор Уровни Наборы"; DateTime dateTime = DateTime.Now; string TNovVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
-            //подключение приложения и документа
-            if (RevitAPI.UiApplication == null) { RevitAPI.Initialize(commandData); }
-            UIDocument uidoc = RevitAPI.UiDocument; Document doc = RevitAPI.Document;
-            UIApplication uiApp = RevitAPI.UiApplication; Autodesk.Revit.ApplicationServices.Application rvtApp = uiApp.Application;
-            
-            //проверка подключения, запись в журнал
-            if(ServerUtils.CheckConnection(TNovClassName, TNovVersion)==false) return Result.Failed;
+            #region Исходные
+            DateTime dateTime = DateTime.Now;
+            string TNovVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
+            string DBCommandName = "Закреплятор Уровни Наборы";
+            //подключение приложения и документа
+            if (RevitAPI.UiApplication == null) { RevitAPI.Initialize(commandData); }
+            UIDocument uidoc = RevitAPI.UiDocument; Document doc = RevitAPI.Document;
+            UIApplication uiApp = RevitAPI.UiApplication; Autodesk.Revit.ApplicationServices.Application rvtApp = uiApp.Application;
+            string docName = doc.Title.ToString(); docName = docName.Replace(",", " ");
+            string userName = rvtApp.Username; userName = userName.Replace(",", "");
+            string docNameUserName = "_" + userName; docName = docName.Replace(docNameUserName, "");
+            docName = docName.Replace(",", "");
+            #endregion
+            
+            TNovConfig config = TNovConfigLoad.LoadConfig(DBCommandName, TNovVersion);
+            
+            #region Настройки логов
+            // создание log - файла
+            Logger.Initialize(DBCommandName, dateTime, TNovVersion);
 
-            // создание log - файла
-            Logger.Initialize(TNovClassName,dateTime,TNovVersion);
-            
+            var viewModel0 = new AppVersionViewModel();
 
-            
-            var viewModel0 = new AppVersionViewModel();
-            
-            string jsonpath0 = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "TNovClient/TNovSettings.json"); 
-            viewModel0 = JsonConvert.DeserializeObject<AppVersionViewModel>(File.ReadAllText(jsonpath0));
-            if (viewModel0.extendedLogs)
-            
-            {
-                var qViewModel = new QuestionWindowViewModel();
-                qViewModel.headtxt = "Включены расширенные логи. " +
-                    "Плагин будет работать медленнее, но соберет больше данных. " +
-                    "Выключить расширенные логи для ускорения работы?";
-                var qwpfview = new QuestionWindow280(qViewModel);
-                qViewModel.CloseRequest += (s, e) => qwpfview.Close();
-                bool? qok = qwpfview.ShowDialog();
-                if (qok != null && qok == true) { Logger.TurnOffExtendedLogs(); } else Logger.Log("Расширенные логи вкл",2);
-            }
+            string jsonpath0 = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "TNovClient/TNovSettings.json");
+            viewModel0 = JsonConvert.DeserializeObject<AppVersionViewModel>(File.ReadAllText(jsonpath0));
+            if (viewModel0.extendedLogs)
 
+            {
+                var qViewModel = new QuestionWindowViewModel();
+                qViewModel.headtxt = "Включены расширенные логи. " +
+                    "Плагин будет работать медленнее, но соберет больше данных. " +
+                    "Выключить расширенные логи для ускорения работы?";
+                var qwpfview = new QuestionWindow280(qViewModel);
+                qViewModel.CloseRequest += (s, e) => qwpfview.Close();
+                bool? qok = qwpfview.ShowDialog();
+                if (qok != null && qok == true) { Logger.TurnOffExtendedLogs(); } else Logger.Log("Расширенные логи вкл", 2);
+            }
+            #endregion
+
+#region Сбор элементов
             Logger.Log("Сбор элементов",1);
 
             int failscount1 = 0;
@@ -97,10 +105,13 @@ namespace TNovUtils
             List<Workset> worksetsNotRemove = new List<Workset>(); //пустой список неудаляемых РН
             List<RevitLinkInstance> linksToChange = new List<RevitLinkInstance>(); //пустой список изменяемых связей
 
+#endregion
+
             bool dws = doc.IsWorkshared; if (!dws) Logger.Log("Документ не является ФХ", 2);
             
             string tname = "TNov - Закреплятор Уровни Наборы"; 
 
+#region Вьюмодель
             Logger.Log("Диалоговое окно",1);
             //Вьюмодель (без открытия окна)
             var viewModel = new PLWViewModel();
@@ -129,9 +140,12 @@ namespace TNovUtils
                 catch (Exception ex) { Logger.Log("Ошибка при сериализации: " + ex.Message,4); }
             }
 
+#endregion
+
             if (viewModel.pin == false && viewModel.levels == false && viewModel.worksets == false) 
             { Logger.Log("Все галочки сняты. Завершение работы.", 3); return Result.Cancelled; } //ни одна галочка не выбрана...
 
+#region Проверка связей
             if (dws == true && links.Count>0)
             {
                 foreach (var link in links)
@@ -178,7 +192,7 @@ worksetFound=true;
                 Logger.Log("Список изменяемых связей:", 1);
                 foreach (var l in linksToChange) { Logger.Log("   " + l.Name + ";",1); }
             }
-
+#endregion
 
             int ec = 0; // счетчик неправильных имен уровней (ec = error counter)
             List<string> wrongnames = new List<string>();
@@ -205,6 +219,7 @@ worksetFound=true;
                 this.plwProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.plwProgressBar.TNov_ProgressBar.Maximum = (double)allcount));
                 this.plwProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.plwProgressBar.maxvalue.Text = allcount.ToString()));
 
+#region Спецнаборы
                 if (dws&&viewModel.worksets)
                 {
                     //проверяем наличие набора для осей/уровней
@@ -240,8 +255,9 @@ worksetFound=true;
                         worksetsNotRemove.Add(ws);
                     }
                 }
-                
+                #endregion
 
+#region Наборы связей
 
                 foreach (var link in linksToChange)
                 {
@@ -360,7 +376,8 @@ worksetFound=true;
                     this.plwProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.plwProgressBar.value.Text = PBCount.ToString()));
 
                 }
-
+#endregion
+#region Оси
                 foreach (var grid in grids) //назначаем набор осям и закрепляем
                 {
                     string eid = grid.Id.ToString();
@@ -418,7 +435,9 @@ worksetFound=true;
                     this.plwProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.plwProgressBar.value.Text = PBCount.ToString()));
 
                 }
+#endregion
 
+#region Уровни
                 foreach (var level in levels) //назначаем набор уровням и закрепляем
                 {
                     string eid = level.Id.ToString();
@@ -512,8 +531,9 @@ worksetFound=true;
 
                 }
 
+#endregion
 
-
+#region Наборы на удаление
                 //после назначения наборов всем связям также обозначим для удаления наборы, содержащие в имени первые 3 символа шифра и не назначенные связям
                 if (dws&&viewModel.worksets&&worksetsNotRemove.Count>0 && links.Count > 0)
                 {
@@ -554,7 +574,7 @@ worksetFound=true;
                         }
                     }
                 }
-                
+                #endregion
 
                 transaction.Commit();
                 this.plwProgressBar.Dispatcher.Invoke((System.Action)(() => this.plwProgressBar.Close()));
