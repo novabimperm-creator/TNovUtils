@@ -22,25 +22,46 @@ namespace TNovUtils
         
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
-            string TNovClassName = "Выбор по ID"; DateTime dateTime = DateTime.Now; string TNovVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
+            #region Исходные
+            DateTime dateTime = DateTime.Now;
+            string TNovVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
+            string DBCommandName = "Выбор по ID";
             //подключение приложения и документа
-            if (RevitAPI.UiApplication == null) {RevitAPI.Initialize(commandData);}
+            if (RevitAPI.UiApplication == null) { RevitAPI.Initialize(commandData); }
             UIDocument uidoc = RevitAPI.UiDocument; Document doc = RevitAPI.Document;
             UIApplication uiApp = RevitAPI.UiApplication; Autodesk.Revit.ApplicationServices.Application rvtApp = uiApp.Application;
-            
-            //проверка подключения, запись в журнал
-            if(ServerUtils.CheckConnection(TNovClassName, TNovVersion)==false) return Result.Failed;
+            string docName = doc.Title.ToString(); docName = docName.Replace(",", " ");
+            string userName = rvtApp.Username; userName = userName.Replace(",", "");
+            string docNameUserName = "_" + userName; docName = docName.Replace(docNameUserName, "");
+            docName = docName.Replace(",", "");
+            #endregion
 
+            TNovConfig config = TNovConfigLoad.LoadConfig(DBCommandName, TNovVersion);
+
+            #region Настройки логов
             // создание log - файла
-            Logger.Initialize(TNovClassName,dateTime,TNovVersion);
-            
+            Logger.Initialize(DBCommandName, dateTime, TNovVersion);
 
-            
+            var viewModel0 = new AppVersionViewModel();
 
-            
+            string jsonpath0 = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "TNovClient/TNovSettings.json");
+            viewModel0 = JsonConvert.DeserializeObject<AppVersionViewModel>(File.ReadAllText(jsonpath0));
+            if (viewModel0.extendedLogs)
 
+            {
+                var qViewModel = new QuestionWindowViewModel();
+                qViewModel.headtxt = "Включены расширенные логи. " +
+                    "Плагин будет работать медленнее, но соберет больше данных. " +
+                    "Выключить расширенные логи для ускорения работы?";
+                var qwpfview = new QuestionWindow280(qViewModel);
+                qViewModel.CloseRequest += (s, e) => qwpfview.Close();
+                bool? qok = qwpfview.ShowDialog();
+                if (qok != null && qok == true) { Logger.TurnOffExtendedLogs(); } else Logger.Log("Расширенные логи вкл", 2);
+            }
+            #endregion
+            
+#region Диалог
             Logger.Log("Открываем диалоговое окно",1);
-            // Диалоговое окно
             var viewModel = new IdSelectionViewModel();
             // Десериализация
             bool forProject = false;
@@ -69,7 +90,9 @@ namespace TNovUtils
             bool cutview = viewModel.cut;
             
             string[] s_ids = ids.Split(',');
+#endregion
 
+#region Основной код
             Logger.Log("Завершаем изоляцию вида", 1);
             string viewtype = RevitAPI.UiDocument.ActiveGraphicalView.Title;
             Autodesk.Revit.DB.View3D view3d;
@@ -129,7 +152,8 @@ namespace TNovUtils
                     if (isolate && cutview && viewtype.Contains("3D"))
                     {
                         Logger.Log("Открываем транзакцию 2 - изолировать элементы и подрезать 3D-вид",1);
-                        trans2.Start("TNov - изолировать элементы и подрезать 3D-вид");
+                        try{
+trans2.Start("TNov - изолировать элементы и подрезать 3D-вид");
                         uidoc.ActiveGraphicalView.IsolateElementsTemporary(ids.Split(',').Select(s => new ElementId(int.Parse(s))).ToArray());
                         view3d = (View3D)RevitAPI.UiDocument.ActiveGraphicalView;
                         var bb = boxes.Aggregate((acc, elem) => acc._BbUnion(elem)); //объединение Bbox (ссылка на метод класса BbUnion) 
@@ -149,19 +173,31 @@ namespace TNovUtils
                         view3d.SetSectionBox(expandedBox);
                         trans2.Commit();
                         Logger.Log("Закрываем транзакцию 2",1);
+} 
+catch (Exception ex)
+                   		{
+                        Logger.Log("Ошибка: " + ex.Message, 4);
+                   		}
                     }
                     else if (isolate)
                     {
                         Logger.Log("Открываем транзакцию 2 - изолировать элементы",1);
-                        trans2.Start("TNov - изолировать элементы");
+                        try{
+trans2.Start("TNov - изолировать элементы");
                         RevitAPI.UiDocument.ActiveGraphicalView.IsolateElementsTemporary(ids.Split(',').Select(s => new ElementId(int.Parse(s))).ToArray());
                         trans2.Commit();
                         Logger.Log("Закрываем транзакцию 2", 1);
+} 
+catch (Exception ex)
+                    {
+                        Logger.Log("Ошибка: " + ex.Message, 4);
+                     }
                     }
                     else if (cutview && viewtype.Contains("3D"))
                     {
                         Logger.Log("Открываем транзакцию 2 - подрезать 3D-вид",1);
-                        trans2.Start("TNov - подрезать 3D-вид");
+                        try{
+trans2.Start("TNov - подрезать 3D-вид");
                         view3d = (View3D)RevitAPI.UiDocument.ActiveGraphicalView;
                         var bb = boxes.Aggregate((acc, elem) => acc._BbUnion(elem)); //объединение Bbox (ссылка на метод класса BbUnion) 
                         BoundingBoxXYZ expandedBox = new BoundingBoxXYZ
@@ -180,9 +216,16 @@ namespace TNovUtils
                         view3d.SetSectionBox(expandedBox);
                         trans2.Commit();
                         Logger.Log("Закрываем транзакцию 2",1);
+} 
+catch (Exception ex)
+                    {
+                        Logger.Log("Ошибка: " + ex.Message, 4);
+                     }
                     }
                 }
             }
+#endregion
+
 
             Logger.Log("Завершение работы.",5);
 
