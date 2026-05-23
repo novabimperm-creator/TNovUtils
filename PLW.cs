@@ -145,26 +145,32 @@ namespace TNovUtils
                     lname = lname.Replace(".rvt", "");
                     linkslist.Add(lname);
                     bool changeLink = true;
-
+bool worksetFound=false;//назначим true если набор найден и назначен корректно
                     foreach (var workset in worksets0)
                     {
                         WorksetId wid = workset.Id;
-//нужно сделать гибкое условие: если имя набора содержит
-//имя связи, нужно 1) проверить экз и назначить при необходимости через транзакцию
+if(workset.Name.Contains(lname))
+{
+//проверка корректности и попытка починить на ходу
+// нужно 1) проверить экз и назначить при необходимости через транзакцию
 //2) то же, тип
 //если в 1 и/или 2 возникли ошибки (транзакции внутри try)
-//то {}
-//иначе набор добавляем в список неудаляемых и changelink false
-//после этого break
+//то {} 
+else
+{
+worksetsNotRemove.Add(workset); //если набор связи содержит в названии её имя - добавляем его в список неудаляемых
+                            changeLink = false;
+worksetFound=true;
+}
+}
 
 
-
-
+/* старый код вызывал ошибки
                         if (wid == lwid && wid == ltypewid && workset.Name.Contains(lname))
                         {
                             worksetsNotRemove.Add(workset); //если набор связи содержит в названии её имя - добавляем его в список неудаляемых
                             changeLink = false; break;
-                        }
+                        }*/
                     }
 
                     if(changeLink) linksToChange.Add(link);
