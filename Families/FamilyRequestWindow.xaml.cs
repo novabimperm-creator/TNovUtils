@@ -20,7 +20,7 @@ namespace TNovUtils
             LoadResponsibleList();
 
             // Устанавливаем срок: дата — через 2 дня от текущего момента
-            dpDeadline.SelectedDate = DateTime.Now.AddDays(2);
+            dpDeadline.SelectedDate = DateTime.Now.AddDays(2).AddMinutes(5);
             txtTime.Text = DateTime.Now.ToString("HH:mm");
 
             // Отображаем имя и роль текущего пользователя
@@ -49,8 +49,8 @@ namespace TNovUtils
             {
                 case "АР": defaultAssignee = "Чащин Е.А"; break;
                 case "КР": defaultAssignee = "Порываев И.А"; break;
-                case "ВК":
-                case "ОВ":
+                case "ВК": defaultAssignee = "Рошиор А.Г"; break;
+                case "ОВ": defaultAssignee = "Рошиор А.Г"; break;
                 case "ЭЛ": defaultAssignee = "Рошиор А.Г"; break;
             }
 
@@ -166,6 +166,9 @@ namespace TNovUtils
 
             RequestStorage.AddRequest(request);
             //EmailNotifier.SendRequestNotification(request);
+
+Logger.Log($"Создана заявка {request.Description}, исполнитель: {request.Assignee}, проект: {request.ProjectDisplayName}",1);
+
             DialogResult = true;
             Close();
         }
