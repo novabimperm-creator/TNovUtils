@@ -42,17 +42,25 @@ namespace TNovUtils
         }
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
-            string TNovClassName = "Связной"; DateTime dateTime = DateTime.Now; string TNovVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
+            #region Исходные
+            DateTime dateTime = DateTime.Now;
+            string TNovVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
+            string DBCommandName = "Связной";
             //подключение приложения и документа
             if (RevitAPI.UiApplication == null) { RevitAPI.Initialize(commandData); }
             UIDocument uidoc = RevitAPI.UiDocument; Document doc = RevitAPI.Document;
             UIApplication uiApp = RevitAPI.UiApplication; Autodesk.Revit.ApplicationServices.Application rvtApp = uiApp.Application;
+            string docName = doc.Title.ToString(); docName = docName.Replace(",", " ");
+            string userName = rvtApp.Username; userName = userName.Replace(",", "");
+            string docNameUserName = "_" + userName; docName = docName.Replace(docNameUserName, "");
+            docName = docName.Replace(",", "");
+            #endregion
 
-            //проверка подключения, запись в журнал
-            if(ServerUtils.CheckConnection(TNovClassName, TNovVersion)==false) return Result.Failed;
+            TNovConfig config = TNovConfigLoad.LoadConfig(DBCommandName, TNovVersion);
 
+            #region Настройки логов
             // создание log - файла
-            Logger.Initialize(TNovClassName,dateTime,TNovVersion);
+            Logger.Initialize(DBCommandName, dateTime, TNovVersion);
 
             var viewModel0 = new AppVersionViewModel();
 
@@ -70,6 +78,7 @@ namespace TNovUtils
                 bool? qok = qwpfview.ShowDialog();
                 if (qok != null && qok == true) { Logger.TurnOffExtendedLogs(); } else Logger.Log("Расширенные логи вкл", 2);
             }
+            #endregion                        
 
             Logger.Log("Сбор элементов", 1);
 
@@ -95,7 +104,7 @@ namespace TNovUtils
             Logger.Log("Элементы собраны. Создаем списки для работы, проверяем, является ли модель файлом хранилища", 1);
             bool dws = doc.IsWorkshared; if (!dws) Logger.Log("Документ не является ФХ", 2);
 
-            //Диалоговое окно
+            #region Диалог
             Logger.Log("Диалоговое окно", 1);
             RevitServerViewModel viewModel = new RevitServerViewModel(linksString);
             var wpfview = new RevitServer(viewModel);
@@ -104,6 +113,9 @@ namespace TNovUtils
             if (ok != null && ok == true) { }
             else { Logger.Log("Запуск отменен пользователем. Завершение работы.", 3); return Result.Cancelled; }
 
+#endregion
+
+#region Сбор элементов 
             //собираем список связей на вставку
             Logger.Log("Собираем список связей на вставку", 1);
 
@@ -119,6 +131,7 @@ namespace TNovUtils
                     Logger.Log("   " + path, 2);
                 }
             }
+#endregion
 
             Thread thread = new Thread(new ThreadStart(this.ThreadStartingPoint));
             thread.SetApartmentState(ApartmentState.STA);
@@ -132,7 +145,7 @@ namespace TNovUtils
             this.bimExportProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.bimExportProgressBar.TNov_ProgressBar.Maximum = (double)modelPaths.Count));
             this.bimExportProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.bimExportProgressBar.maxvalue.Text = modelPaths.Count.ToString()));
 
-
+#region Основной код
             List<string> badLinks = new List<string>();
             //транзакция - вставка связей
 
@@ -152,8 +165,8 @@ namespace TNovUtils
                         this.bimExportProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.bimExportProgressBar.info.Text = fileName));
 
 
-                        if (LinkModel(doc, modelPath) == false) badLinks.Add(fileName);
-
+                        if (LinkModel(doc, modelPath) == false) {badLinks.Add(fileName);
+Logger.Log($"Ошибка",4);}
                         PBCount++;
                         this.bimExportProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.bimExportProgressBar.TNov_ProgressBar.Value = (double)PBCount));
                         this.bimExportProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.bimExportProgressBar.value.Text = PBCount.ToString()));
@@ -163,15 +176,20 @@ namespace TNovUtils
                     trans.Commit(); Logger.Log("Закрываем транзакцию", 1);
                 }
 
-                this.bimExportProgressBar.Dispatcher.Invoke((System.Action)(() => this.bimExportProgressBar.Close()));
+                
 
             }
             catch (Exception ex)
             {
                 message = ex.Message;
+Logger.Log($"Ошибка: {message}",4);
                 return Result.Failed;
             }
-
+finally
+                    {
+                        CloseProgressBarSafely();
+                    }
+#endregion
             
 
 
@@ -188,6 +206,22 @@ namespace TNovUtils
 
             return Result.Succeeded;
         }
+private void CloseProgressBarSafely()
+        {
+            if (bimExportProgressBar != null &&
+                bimExportProgressBar.Dispatcher != null &&
+                !bimExportProgressBar.Dispatcher.HasShutdownStarted)
+            {
+                bimExportProgressBar.Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    if (bimExportProgressBar.IsLoaded)
+                        bimExportProgressBar.Close();
+                    // Завершаем цикл сообщений диспетчера, чтобы поток завершился
+                    Dispatcher.CurrentDispatcher.InvokeShutdown();
+                }));
+            }
+        }
+    }
         private bool LinkModel(Document doc, string serverPath)
         {
             bool success = false;
