@@ -1,4 +1,4 @@
-﻿using Autodesk.Revit.DB;
+using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.Attributes;
 using System.Collections.Generic;
@@ -149,6 +149,17 @@ namespace TNovUtils
                     foreach (var workset in worksets0)
                     {
                         WorksetId wid = workset.Id;
+//нужно сделать гибкое условие: если имя набора содержит
+//имя связи, нужно 1) проверить экз и назначить при необходимости через транзакцию
+//2) то же, тип
+//если в 1 и/или 2 возникли ошибки (транзакции внутри try)
+//то {}
+//иначе набор добавляем в список неудаляемых и changelink false
+//после этого break
+
+
+
+
                         if (wid == lwid && wid == ltypewid && workset.Name.Contains(lname))
                         {
                             worksetsNotRemove.Add(workset); //если набор связи содержит в названии её имя - добавляем его в список неудаляемых
