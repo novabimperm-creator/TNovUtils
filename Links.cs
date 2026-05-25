@@ -221,7 +221,7 @@ private void CloseProgressBarSafely()
                 }));
             }
         }
-    }
+    
         private bool LinkModel(Document doc, string serverPath)
         {
             bool success = false;
