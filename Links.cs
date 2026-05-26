@@ -122,11 +122,12 @@ namespace TNovUtils
             List<string> modelPaths = new List<string>();
 
             List<Node> allNodes = GetAllNodes(viewModel.Nodes).ToList();
+            string RSfilePath = File.ReadAllText(config.ServerPath + "RSpath.txt");
             foreach (var node in allNodes)
             {
                 if (node.IsChecked && node.IsModel && node.IsLocked==false) 
                 {
-                    string path = @"RSN:\\" + nova.revitserver + @"\" + node.Path;
+                    string path = @"RSN:\\" + RSfilePath + @"\" + node.Path;
                     modelPaths.Add(path);
                     Logger.Log("   " + path, 2);
                 }

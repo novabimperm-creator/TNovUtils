@@ -5,6 +5,7 @@ using System.Linq;
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
+using Newtonsoft.Json;
 using TNovCommon;
 
 namespace TNovUtils
@@ -15,14 +16,14 @@ namespace TNovUtils
     {
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
-                        #region Исходные
+            #region Исходные
             DateTime dateTime = DateTime.Now;
             string TNovVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
             string DBCommandName = "Семейный";
             //подключение приложения и документа
             if (RevitAPI.UiApplication == null) { RevitAPI.Initialize(commandData); }
             UIDocument uidoc = RevitAPI.UiDocument; Document doc = RevitAPI.Document;
-            UIApplication uiapp = RevitAPI.UiApplication; Autodesk.Revit.ApplicationServices.Application rvtApp = uiApp.Application;
+            UIApplication uiApp = RevitAPI.UiApplication; Autodesk.Revit.ApplicationServices.Application rvtApp = uiApp.Application;
             string docName = doc.Title.ToString(); docName = docName.Replace(",", " ");
             string userName = rvtApp.Username; userName = userName.Replace(",", "");
             string docNameUserName = "_" + userName; docName = docName.Replace(docNameUserName, "");
@@ -98,7 +99,7 @@ string libraryPath = @"\\fs-nova\NOVA\04_БИБЛИОТЕКА\BIM";
                 if (!Directory.Exists(libraryPath))
                 {
                     new InfoWindow400($"Папка не найдена: {libraryPath}\nПроверьте доступность сетевого диска.").ShowDialog();
-Logger.Log($"Папка не найдена: {libraryPath}\nПроверьте доступность сетевого диска",4);
+                    Logger.Log($"Папка не найдена: {libraryPath}\nПроверьте доступность сетевого диска",4);
                     return Result.Failed;
                 }
 
@@ -112,7 +113,7 @@ Logger.Log($"Папка не найдена: {libraryPath}\nПроверьте �
                 if (dialogResult == true && window.SelectedFamily != null)
                 {
                     string familyPath = window.SelectedFamily.FullPath;
-Logger.Log($"Выбрано семейство {familyPath}", 1);
+                    Logger.Log($"Выбрано семейство {familyPath}", 1);
                     try
                     {
                         using (Transaction tx = new Transaction(doc, "Загрузка семейства"))
@@ -122,12 +123,12 @@ Logger.Log($"Выбрано семейство {familyPath}", 1);
                             if (doc.LoadFamily(familyPath, out family))
                             {
                                 new InfoWindow400($"Семейство '{window.SelectedFamily.Name}' загружено.").ShowDialog();
-Logger.Log($"Семейство '{window.SelectedFamily.Name}' загружено.", 1);
+                                Logger.Log($"Семейство '{window.SelectedFamily.Name}' загружено.", 1);
                             }
                             else
                             {
                                 new InfoWindow400("Не удалось загрузить семейство.").ShowDialog();
-Logger.Log("Не удалось загрузить семейство.",4);
+                                Logger.Log("Не удалось загрузить семейство.",4);
                             }
                             tx.Commit();
                         }
@@ -135,7 +136,7 @@ Logger.Log("Не удалось загрузить семейство.",4);
                     catch (Exception ex)
                     {
                         message = ex.Message;
-															Logger.Log($"Ошибка: {ex.Message},4);
+						Logger.Log($"Ошибка: {ex.Message}",4);
                         return Result.Failed;
                     }
                 }
@@ -143,20 +144,20 @@ Logger.Log("Не удалось загрузить семейство.",4);
             else if (result == TaskDialogResult.CommandLink2)
             {
                 Logger.Log("Сценарий 2 - заявка на семейство", 1);
-var requestWindow = new FamilyRequestWindow(
-                    RevitContext.CurrentProjectPath,
-                    RevitContext.CurrentProjectDisplayName);
+                var requestWindow = new FamilyRequestWindow(
+                RevitContext.CurrentProjectPath,
+                RevitContext.CurrentProjectDisplayName);
                 requestWindow.ShowDialog();
             }
             else if (result == TaskDialogResult.CommandLink3)
             {
                 Logger.Log("Сценарий 3 - журнал заявок", 1);
-var requestsWindow = new RequestsListWindow();
+                var requestsWindow = new RequestsListWindow();
                 requestsWindow.ShowDialog();
             }
 
             #endregion
-Logger.Log("Завершение работы",5);
+            Logger.Log("Завершение работы",5);
             return Result.Succeeded;
         }
 

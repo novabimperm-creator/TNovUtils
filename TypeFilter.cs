@@ -16,24 +16,31 @@ namespace TNovUtils
     {
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
-            string TNovClassName = "Типофильтр"; DateTime dateTime = DateTime.Now; string TNovVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
+
+            #region Исходные
+            DateTime dateTime = DateTime.Now;
+            string TNovVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
+            string DBCommandName = "Типофильтр";
             //подключение приложения и документа
             if (RevitAPI.UiApplication == null) { RevitAPI.Initialize(commandData); }
             UIDocument uidoc = RevitAPI.UiDocument; Document doc = RevitAPI.Document;
             UIApplication uiApp = RevitAPI.UiApplication; Autodesk.Revit.ApplicationServices.Application rvtApp = uiApp.Application;
+            string docName = doc.Title.ToString(); docName = docName.Replace(",", " ");
+            string userName = rvtApp.Username; userName = userName.Replace(",", "");
+            string docNameUserName = "_" + userName; docName = docName.Replace(docNameUserName, "");
+            docName = docName.Replace(",", "");
+            #endregion
 
-            //проверка подключения, запись в журнал
-            if(ServerUtils.CheckConnection(TNovClassName, TNovVersion)==false) return Result.Failed;
+            TNovConfig config = TNovConfigLoad.LoadConfig(DBCommandName, TNovVersion);
 
+            #region Настройки логов
             // создание log - файла
-            Logger.Initialize(TNovClassName,dateTime,TNovVersion);
-
+            Logger.Initialize(DBCommandName, dateTime, TNovVersion);
 
             var viewModel0 = new AppVersionViewModel();
 
             string jsonpath0 = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "TNovClient/TNovSettings.json");
             viewModel0 = JsonConvert.DeserializeObject<AppVersionViewModel>(File.ReadAllText(jsonpath0));
-
             if (viewModel0.extendedLogs)
 
             {
@@ -46,7 +53,9 @@ namespace TNovUtils
                 bool? qok = qwpfview.ShowDialog();
                 if (qok != null && qok == true) { Logger.TurnOffExtendedLogs(); } else Logger.Log("Расширенные логи вкл", 2);
             }
+            #endregion
 
+            #region Выборка
             Autodesk.Revit.UI.Selection.Selection selection = commandData.Application.ActiveUIDocument.Selection;
             View activeView = doc.ActiveView;
             List<int> ignoreCategoryId = new List<int>()
@@ -88,6 +97,9 @@ namespace TNovUtils
                     });
                 categories.Add(categoryViewModel);
             }
+            #endregion
+
+            #region Окно
             TypeFilterWPF visibilityFilterWpf = new TypeFilterWPF(categories);
             visibilityFilterWpf.ShowDialog();
             if (!visibilityFilterWpf.DialogResult.GetValueOrDefault())
@@ -96,6 +108,9 @@ namespace TNovUtils
             string filterName = visibilityFilterWpf.FilterName;
             string uniqueFilterName = this.GetUniqueFilterName(doc, filterName);
             List<TypeFilterElementTypeViewModel> selectedElementTypes = visibilityFilterWpf.SelectedElementTypes;
+            #endregion
+
+            #region Основной код
             switch (btnName)
             {
                 case "btn_Hide":
@@ -203,6 +218,7 @@ namespace TNovUtils
                         return Result.Cancelled;
                     }
             }
+            #endregion
             Logger.Log("Завершение работы", 5);
             return Result.Succeeded;
         }

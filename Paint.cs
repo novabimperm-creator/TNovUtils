@@ -1,15 +1,18 @@
-﻿using Autodesk.Revit.DB;
+﻿using Autodesk.Revit.Attributes;
+using Autodesk.Revit.Creation;
+using Autodesk.Revit.DB;
+using Autodesk.Revit.DB.Architecture;
 using Autodesk.Revit.UI;
-using Autodesk.Revit.Attributes;
 using Autodesk.Revit.UI.Selection;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using Autodesk.Revit.Creation;
-using System.Xml.Linq;
-using Autodesk.Revit.DB.Architecture;
+using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Xml.Linq;
 using TNovCommon;
+using Document = Autodesk.Revit.DB.Document;
 
 namespace TNovUtils
 {
@@ -20,18 +23,46 @@ namespace TNovUtils
     {
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
-            string TNovClassName = "Краска+"; DateTime dateTime = DateTime.Now; string TNovVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
+
+            #region Исходные
+            DateTime dateTime = DateTime.Now;
+            string TNovVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
+            string DBCommandName = "Краска+";
             //подключение приложения и документа
             if (RevitAPI.UiApplication == null) { RevitAPI.Initialize(commandData); }
-            UIDocument uidoc = RevitAPI.UiDocument; Autodesk.Revit.DB.Document doc = RevitAPI.Document;
+            UIDocument uidoc = RevitAPI.UiDocument; Document doc = RevitAPI.Document;
             UIApplication uiApp = RevitAPI.UiApplication; Autodesk.Revit.ApplicationServices.Application rvtApp = uiApp.Application;
-            
-            //проверка подключения, запись в журнал
-            if(ServerUtils.CheckConnection(TNovClassName, TNovVersion)==false) return Result.Failed;
+            string docName = doc.Title.ToString(); docName = docName.Replace(",", " ");
+            string userName = rvtApp.Username; userName = userName.Replace(",", "");
+            string docNameUserName = "_" + userName; docName = docName.Replace(docNameUserName, "");
+            docName = docName.Replace(",", "");
+            #endregion
 
+            TNovConfig config = TNovConfigLoad.LoadConfig(DBCommandName, TNovVersion);
+
+            #region Настройки логов
             // создание log - файла
-            Logger.Initialize(TNovClassName,dateTime,TNovVersion);
-            
+            Logger.Initialize(DBCommandName, dateTime, TNovVersion);
+
+            var viewModel0 = new AppVersionViewModel();
+
+            string jsonpath0 = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "TNovClient/TNovSettings.json");
+            viewModel0 = JsonConvert.DeserializeObject<AppVersionViewModel>(File.ReadAllText(jsonpath0));
+            if (viewModel0.extendedLogs)
+
+            {
+                var qViewModel = new QuestionWindowViewModel();
+                qViewModel.headtxt = "Включены расширенные логи. " +
+                    "Плагин будет работать медленнее, но соберет больше данных. " +
+                    "Выключить расширенные логи для ускорения работы?";
+                var qwpfview = new QuestionWindow280(qViewModel);
+                qViewModel.CloseRequest += (s, e) => qwpfview.Close();
+                bool? qok = qwpfview.ShowDialog();
+                if (qok != null && qok == true) { Logger.TurnOffExtendedLogs(); } else Logger.Log("Расширенные логи вкл", 2);
+            }
+            #endregion
+
+            #region Выбор грани
 
             Logger.Log("Выбор исходной грани",1);
             Selection selection = uidoc.Selection;
@@ -60,8 +91,9 @@ namespace TNovUtils
 
             SurfaceSelectionFilter surfaceSelectionFilter = new SurfaceSelectionFilter();
             PaintableSelectionFilter paintableSelectionFilter = new PaintableSelectionFilter();
+            #endregion
 
-            //Транзакция           
+            #region Основной код           
 
             using (Transaction transaction = new Transaction(doc))
             {
@@ -97,13 +129,14 @@ namespace TNovUtils
                     }
                     catch (Autodesk.Revit.Exceptions.OperationCanceledException e)
                     {
-                        Logger.Log("Прервано: " + e.Message + " .Завершение работы.", 3);
                         break;
                     }
                 }
 
                 
             }
+
+            #endregion
             Logger.Log("Завершение работы.",5);
             return Result.Succeeded;
         }

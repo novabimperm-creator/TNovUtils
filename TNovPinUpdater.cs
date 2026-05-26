@@ -35,20 +35,18 @@ namespace TNovUtils
             //параметры
             ElementId familyNameParamId = new ElementId(-1002002); //id параметра Имя семейства
 
-            //проверка подключения к серверу
-            string usagefilePath = nova.novaserver + "_TNov/usage.txt";
-            bool servercheck = File.Exists(usagefilePath);
+            
+            List<ElementId> idsA = data.GetAddedElementIds().ToList();
 
-            if (servercheck)
+            foreach (ElementId id in idsA)
             {
-                List<ElementId> idsA = data.GetAddedElementIds().ToList();
-
-                foreach (ElementId id in idsA)
+                try
                 {
                     Element elem = doc.GetElement(id); elem.Pinned = true;
                 }
-                
+                catch { }
             }
+            
         }
 
         public string GetAdditionalInformation()

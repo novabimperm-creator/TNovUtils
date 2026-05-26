@@ -117,7 +117,7 @@ namespace TNovUtils
             var viewModel = new PLWViewModel();
             // Десериализация
             bool forProject = false;
-            json js = new json(in TNovClassName, in forProject, out bool canserialize, out string jsonpath);
+            json js = new json(in DBCommandName, in forProject, out bool canserialize, out string jsonpath);
             if (canserialize)
             {
                 viewModel = JsonConvert.DeserializeObject<PLWViewModel>(File.ReadAllText(jsonpath));
@@ -159,24 +159,42 @@ namespace TNovUtils
                     lname = lname.Replace(".rvt", "");
                     linkslist.Add(lname);
                     bool changeLink = true;
-bool worksetFound=false;//назначим true если набор найден и назначен корректно
+                    Autodesk.Revit.DB.Parameter param = link.get_Parameter(BuiltInParameter.ELEM_PARTITION_PARAM);//получаем параметр "РН"
+                                                                                                                  //тип связи
+                    Parameter typeparam = linkType.get_Parameter(BuiltInParameter.ELEM_PARTITION_PARAM);
                     foreach (var workset in worksets0)
                     {
                         WorksetId wid = workset.Id;
-if(workset.Name.Contains(lname))
-{
-//проверка корректности и попытка починить на ходу
-// нужно 1) проверить экз и назначить при необходимости через транзакцию
-//2) то же, тип
-//если в 1 и/или 2 возникли ошибки (транзакции внутри try)
-//то {} 
-else
-{
-worksetsNotRemove.Add(workset); //если набор связи содержит в названии её имя - добавляем его в список неудаляемых
-                            changeLink = false;
-worksetFound=true;
-}
-}
+                        if(workset.Name.Contains(lname))
+                        {
+                            bool wsSet = wid == lwid;
+                            bool wsTypeSet = wid == ltypewid;
+                            if (wsSet==false||wsTypeSet==false)
+                            {
+                                using (Transaction t0 = new Transaction(doc))
+                                {
+                                    try
+                                    {
+                                        t0.Start($"Назначение набора {lname}");
+                                        param.Set(workset.Id.IntegerValue); //назначаем РН экземпляру
+                                        wsSet = true;
+                                        typeparam.Set(workset.Id.IntegerValue); //назначаем РН типу
+                                        wsTypeSet = true;
+                                        t0.Commit();
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        Logger.Log($"Не удалось назначить набор связи {lname}: {e.Message}", 4);
+                                    }
+                                }
+                            }
+                            if (wsSet == false || wsTypeSet == false) { }
+                            else
+                            {
+                                worksetsNotRemove.Add(workset); //если набор связи содержит в названии её имя - добавляем его в список неудаляемых
+                                changeLink = false;
+                            }
+                        }
 
 
 /* старый код вызывал ошибки
@@ -588,7 +606,7 @@ worksetFound=true;
             {
                 Logger.Log("Открываем окно с ID проблемных элементов: " + String.Join(",", failed), 1);
                 // Диалоговое окно
-                ElementsTreeWindow window = new ElementsTreeWindow(uiApp, String.Join(",", failed), TNovClassName, dateTime, TNovVersion);
+                ElementsTreeWindow window = new ElementsTreeWindow(uiApp, String.Join(",", failed), DBCommandName, dateTime, TNovVersion);
                 window.Show();
                 
             }

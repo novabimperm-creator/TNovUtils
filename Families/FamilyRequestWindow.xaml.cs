@@ -6,6 +6,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using TNovCommon;
 
 namespace TNovUtils
 {
@@ -167,7 +168,7 @@ namespace TNovUtils
             RequestStorage.AddRequest(request);
             //EmailNotifier.SendRequestNotification(request);
 
-Logger.Log($"Создана заявка {request.Description}, исполнитель: {request.Assignee}, проект: {request.ProjectDisplayName}",1);
+            Logger.Log($"Создана заявка {request.Description}, исполнитель: {request.Assignee}, проект: {request.ProjectDisplayName}",1);
 
             DialogResult = true;
             Close();

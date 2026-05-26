@@ -69,7 +69,7 @@ namespace TNovUtils
             var viewModel = new PLWViewModel();
             // Десериализация
             bool forProject = false;
-            json js = new json(in TNovClassName, in forProject, out bool canserialize, out string jsonpath);
+            json js = new json(in DBCommandName, in forProject, out bool canserialize, out string jsonpath);
             if (canserialize)
             {
                 viewModel = JsonConvert.DeserializeObject<PLWViewModel>(File.ReadAllText(jsonpath));

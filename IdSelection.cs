@@ -65,7 +65,7 @@ namespace TNovUtils
             var viewModel = new IdSelectionViewModel();
             // Десериализация
             bool forProject = false;
-            json js = new json(in TNovClassName, in forProject, out bool canserialize, out string jsonpath);
+            json js = new json(in DBCommandName, in forProject, out bool canserialize, out string jsonpath);
             if (canserialize) 
             {
                 viewModel = JsonConvert.DeserializeObject<IdSelectionViewModel>(File.ReadAllText(jsonpath));
@@ -101,7 +101,6 @@ namespace TNovUtils
                                                                          .WhereElementIsNotElementType()    //фильтр только экземпляры
                                                                          .Cast<View>()                     //элементы категории Виды
                                                                          .ToList();                         //формируем список
-            string userName = rvtApp.Username;
             bool dws = doc.IsWorkshared;
             string viewName = "{3D}";
             if (dws)

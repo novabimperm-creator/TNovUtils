@@ -116,7 +116,8 @@ namespace TNovUtils
                 Nodes.Add(node);
             }
             */
-            List<string> filePaths = File.ReadAllLines(nova.novaserver + "_TNov/RS.txt").ToList();
+            TNovConfig config = TNovConfigLoad.LoadConfig();
+            List<string> filePaths = File.ReadAllLines(config.ServerPath + "RS.txt").ToList();
             Nodes = TreeBuilder.BuildTree(filePaths,existingModels);
         }
 

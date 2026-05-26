@@ -20,25 +20,33 @@ namespace TNovUtils
     {
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
-            string TNovClassName = "Откреплятор"; DateTime dateTime = DateTime.Now; string TNovVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
+
+            #region Исходные
+            DateTime dateTime = DateTime.Now;
+            string TNovVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
+            string DBCommandName = "Откреплятор";
             //подключение приложения и документа
             if (RevitAPI.UiApplication == null) { RevitAPI.Initialize(commandData); }
             UIDocument uidoc = RevitAPI.UiDocument; Document doc = RevitAPI.Document;
             UIApplication uiApp = RevitAPI.UiApplication; Autodesk.Revit.ApplicationServices.Application rvtApp = uiApp.Application;
-            
-            //проверка подключения, запись в журнал
-            if(ServerUtils.CheckConnection(TNovClassName, TNovVersion)==false) return Result.Failed;
+            string docName = doc.Title.ToString(); docName = docName.Replace(",", " ");
+            string userName = rvtApp.Username; userName = userName.Replace(",", "");
+            string docNameUserName = "_" + userName; docName = docName.Replace(docNameUserName, "");
+            docName = docName.Replace(",", "");
+            #endregion
 
+            TNovConfig config = TNovConfigLoad.LoadConfig(DBCommandName, TNovVersion);
+
+            #region Настройки логов
             // создание log - файла
-            Logger.Initialize(TNovClassName,dateTime,TNovVersion);
-            
+            Logger.Initialize(DBCommandName, dateTime, TNovVersion);
 
             var viewModel0 = new AppVersionViewModel();
-            
+
             string jsonpath0 = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "TNovClient/TNovSettings.json");
             viewModel0 = JsonConvert.DeserializeObject<AppVersionViewModel>(File.ReadAllText(jsonpath0));
             if (viewModel0.extendedLogs)
-            
+
             {
                 var qViewModel = new QuestionWindowViewModel();
                 qViewModel.headtxt = "Включены расширенные логи. " +
@@ -47,9 +55,11 @@ namespace TNovUtils
                 var qwpfview = new QuestionWindow280(qViewModel);
                 qViewModel.CloseRequest += (s, e) => qwpfview.Close();
                 bool? qok = qwpfview.ShowDialog();
-                if (qok != null && qok == true) { Logger.TurnOffExtendedLogs(); } else Logger.Log( "Расширенные логи вкл", 2);
+                if (qok != null && qok == true) { Logger.TurnOffExtendedLogs(); } else Logger.Log("Расширенные логи вкл", 2);
             }
+            #endregion
 
+            #region Сбор элементов
             Logger.Log("Сбор элементов",1);
             
             int failscount = 0;
@@ -68,16 +78,17 @@ namespace TNovUtils
                                                                          .WhereElementIsNotElementType()    //фильтр только экземпляры
                                                                          .Cast<RevitLinkInstance>()         //элементы категории Связи
                                                                          .ToList();                         //формируем список
-            
-            
+            #endregion
+
             List<string> failed = new List<string>(); //пустой список id элементов с недоступным параметром Закрепить
 
+            #region Диалог
             Logger.Log("Диалоговое окно",1);
             // Диалоговое окно
             var viewModel = new UnpinnerViewModel();
             // Десериализация
             bool forProject = false; 
-            json js = new json(in TNovClassName, in forProject, out bool canserialize, out string jsonpath);
+            json js = new json(in DBCommandName, in forProject, out bool canserialize, out string jsonpath);
             if (canserialize)
             {
                 viewModel = JsonConvert.DeserializeObject<UnpinnerViewModel>(File.ReadAllText(jsonpath));
@@ -109,9 +120,10 @@ namespace TNovUtils
                 if (runlinks) { Logger.Log("Связи вкл", 2); }
                 else { Logger.Log("Связи выкл", 2); }
             }
-            
+            #endregion
 
-            if(rungrids||runlevels||runlinks)
+            #region Основной код
+            if (rungrids||runlevels||runlinks)
             {
                 using (Transaction transaction = new Transaction(doc))
                 {
@@ -170,14 +182,15 @@ namespace TNovUtils
                     {
                         Logger.Log("Открываем окно с ID проблемных элементов: " + String.Join(",", failed), 1);
                         // Диалоговое окно
-                        ElementsTreeWindow window = new ElementsTreeWindow(uiApp, String.Join(",", failed), TNovClassName, dateTime, TNovVersion);
+                        ElementsTreeWindow window = new ElementsTreeWindow(uiApp, String.Join(",", failed), DBCommandName, dateTime, TNovVersion);
                         window.Show();
                     }
                     transaction.Commit();
                     Logger.Log("Закрываем транзакцию.",1);
                 }
             }
-            
+            #endregion
+
             Logger.Log("Завершение работы.",5);
             return Result.Succeeded;
             
