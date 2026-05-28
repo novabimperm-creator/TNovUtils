@@ -7,125 +7,95 @@
         mc:Ignorable="d" Width="400"
         d:DataContext="{d:DesignInstance local:RevitServerViewModel}"
             WindowStartupLocation="CenterScreen" 
-            Background="White" BorderBrush="#FF008E43" BorderThickness="1"
+                                       AllowsTransparency="True"
+Background="Transparent" 
             ResizeMode="NoResize" WindowStyle="None">
     <Window.Resources>
-        <!-- Стиль с полным шаблоном -->
-        <Style x:Key="CustomButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#F0F0F0"/>
-            <Setter Property="Foreground" Value="Black"/>
-            <Setter Property="BorderBrush" Value="#CCCCCC"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <!-- Убираем SystemColors -->
-                        <ControlTemplate.Resources>
-                            <SolidColorBrush x:Key="{x:Static SystemColors.ControlBrushKey}" 
-                                         Color="Transparent"/>
-                            <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" 
-                                         Color="Transparent"/>
-                        </ControlTemplate.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/TNovCommon;component/ButtonStyles.xaml"/>
 
-                        <Border x:Name="border"
-                            Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="2">
-                            <ContentPresenter HorizontalAlignment="Center"
-                                          VerticalAlignment="Center"
-                                          Margin="{TemplateBinding Padding}"/>
-                        </Border>
+            </ResourceDictionary.MergedDictionaries>
 
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <!-- Прямое указание цвета -->
-                                <Setter TargetName="border" 
-                                    Property="Background" 
-                                    Value="#FF008E43"/>
-                                <!-- Цвет заголовка -->
-                                <Setter Property="Foreground" Value="White"/>
-                            </Trigger>
-
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="border" 
-                                    Property="Background" 
-                                    Value="#FF008E43"/>
-                                <!-- Темнее -->
-                            </Trigger>
-
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="border" 
-                                    Property="Opacity" 
-                                    Value="0.5"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <local:InverseConverter x:Key="InverseConverter"/>
+            <local:InverseConverter x:Key="InverseConverter"/>
+        </ResourceDictionary>
     </Window.Resources>
     <WindowChrome.WindowChrome>
         <WindowChrome CaptionHeight="30"
               ResizeBorderThickness="5"
               GlassFrameThickness="0"
-              CornerRadius="0"/>
+              CornerRadius="12"/>
     </WindowChrome.WindowChrome>
-    <Grid>
-        <!-- Верхняя панель (кастомный заголовок) -->
-        <Border Height="30" 
-                Background="#FF008E43" 
-                VerticalAlignment="Top"
-                MouseDown="Border_MouseDown">
-            <TextBlock Text="Дерево моделей Revit Server" 
-                       Foreground="White"
-                       VerticalAlignment="Center"
-                       Margin="10,0"/>
-        </Border>
+    <Border CornerRadius="12"
+    Background="White"
+    BorderBrush="#FF008E43"
+    BorderThickness="1">
+        <Grid>
+            <!-- Верхняя панель (кастомный заголовок) -->
+            <Border Height="30" CornerRadius="12 12 0 0"
+    Background="#FF008E43" 
+    VerticalAlignment="Top"
+    MouseDown="Border_MouseDown">
+                <StackPanel Orientation="Horizontal">
+                    <Button Style="{StaticResource RoundButtonStyle}" 
+Click="escButton_Click" Content="✕"
+HorizontalAlignment="Center" VerticalAlignment="Center"
+Width="20" Height="20" Margin="5,0"
+WindowChrome.IsHitTestVisibleInChrome="True"/>
+                    <Button Style="{StaticResource RoundButtonStyle3}" 
+Content=""
+HorizontalAlignment="Center" VerticalAlignment="Center"
+Width="20" Height="20" Margin="0"
+WindowChrome.IsHitTestVisibleInChrome="True"/>
+                    <TextBlock Text="Revit Server" 
+Foreground="White"
+VerticalAlignment="Center"
+Margin="10,0"/>
+                </StackPanel>
 
-        <!-- Основное содержимое -->
-        <Border Margin="0,30,0,0">
+            </Border>
 
-            <StackPanel VerticalAlignment="Center" Margin="5">
+            <!-- Основное содержимое -->
+            <Border Margin="0,30,0,0">
+
+                <StackPanel VerticalAlignment="Center" Margin="5">
 
 
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" >
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" >
 
-                    <TreeView MinHeight="100" MaxHeight="400" Width="370" x:Name="treeView"
+                        <TreeView MinHeight="100" MaxHeight="400" Width="370" x:Name="treeView"
     BorderBrush="{x:Null}"
     BorderThickness="0"
     ItemsSource="{Binding Path=Nodes, Mode=TwoWay}"
     Margin="5">
-                        <TreeView.ItemTemplate>
-                            <HierarchicalDataTemplate ItemsSource="{Binding Path=Children, Mode=TwoWay}">
-                                <StackPanel Orientation="Horizontal">
-                                    <CheckBox
+                            <TreeView.ItemTemplate>
+                                <HierarchicalDataTemplate ItemsSource="{Binding Path=Children, Mode=TwoWay}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <CheckBox
                 IsChecked="{Binding  IsChecked, Mode=TwoWay}"
                             IsEnabled="{Binding IsLocked, Converter={StaticResource InverseConverter}}"
                 Uid="{Binding Id}" />
-                                    <TextBlock Text="{Binding Text}" />
-                                </StackPanel>
-                            </HierarchicalDataTemplate>
-                        </TreeView.ItemTemplate>
-                    </TreeView>
+                                        <TextBlock Text="{Binding Text}" />
+                                    </StackPanel>
+                                </HierarchicalDataTemplate>
+                            </TreeView.ItemTemplate>
+                        </TreeView>
+
+                    </StackPanel>
+
+
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+
+                        <Button Style="{StaticResource CustomButtonStyle}" Content="Отмена" x:Name="escButton" IsCancel="True" Click="escButton_Click" MinWidth="60" MinHeight="25" Margin="20 5 5 5" />
+                        <Button Style="{StaticResource CustomButtonStyle}" Content="Выбрать" x:Name="acceptButton" IsDefault="True" Click="acceptButton_Click" MinWidth="110" Margin="5"/>
+                    </StackPanel>
 
                 </StackPanel>
 
+            </Border>
+        </Grid>
 
+    </Border>
 
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-
-                    <Button Style="{StaticResource CustomButtonStyle}" Content="Отмена" x:Name="escButton" IsCancel="True" Click="escButton_Click" MinWidth="60" MinHeight="25" Margin="20 5 5 5" />
-                    <Button Style="{StaticResource CustomButtonStyle}" Content="Выбрать" x:Name="acceptButton" IsDefault="True" Click="acceptButton_Click" MinWidth="110" Margin="5"/>
-                </StackPanel>
-
-            </StackPanel>
-
-        </Border>
-    </Grid>
-
-    
-    
 </Window>
