@@ -1,0 +1,30 @@
+\\fs-nova\Distr\0.For Admin\_TNov\build\2022\TNovUtils.dll.config
+\\fs-nova\Distr\0.For Admin\_TNov\build\2022\TNovUtils.dll
+\\fs-nova\Distr\0.For Admin\_TNov\build\2022\TNovUtils.pdb
+Z:\DEV\TNovUtils\obj\R2022\TNovUtils.csproj.AssemblyReference.cache
+Z:\DEV\TNovUtils\obj\R2022\Families\FamilyBrowserWindow.baml
+Z:\DEV\TNovUtils\obj\R2022\Families\FamilyRequestWindow.baml
+Z:\DEV\TNovUtils\obj\R2022\Families\RequestDetailsWindow.baml
+Z:\DEV\TNovUtils\obj\R2022\Families\FamilyBrowserWindow.g.cs
+Z:\DEV\TNovUtils\obj\R2022\Families\FamilyRequestWindow.g.cs
+Z:\DEV\TNovUtils\obj\R2022\Families\RequestDetailsWindow.g.cs
+Z:\DEV\TNovUtils\obj\R2022\Families\RequestsListWindow.g.cs
+Z:\DEV\TNovUtils\obj\R2022\IdSelectionWPF.g.cs
+Z:\DEV\TNovUtils\obj\R2022\PLWWPF.g.cs
+Z:\DEV\TNovUtils\obj\R2022\RevitServer.g.cs
+Z:\DEV\TNovUtils\obj\R2022\TypeFilterWPF.g.cs
+Z:\DEV\TNovUtils\obj\R2022\UnpinnerWPF.g.cs
+Z:\DEV\TNovUtils\obj\R2022\GeneratedInternalTypeHelper.g.cs
+Z:\DEV\TNovUtils\obj\R2022\TNovUtils_MarkupCompile.cache
+Z:\DEV\TNovUtils\obj\R2022\TNovUtils_MarkupCompile.lref
+Z:\DEV\TNovUtils\obj\R2022\Families\RequestsListWindow.baml
+Z:\DEV\TNovUtils\obj\R2022\IdSelectionWPF.baml
+Z:\DEV\TNovUtils\obj\R2022\PLWWPF.baml
+Z:\DEV\TNovUtils\obj\R2022\RevitServer.baml
+Z:\DEV\TNovUtils\obj\R2022\TypeFilterWPF.baml
+Z:\DEV\TNovUtils\obj\R2022\UnpinnerWPF.baml
+Z:\DEV\TNovUtils\obj\R2022\TNovUtils.g.resources
+Z:\DEV\TNovUtils\obj\R2022\TNovUtils.csproj.CoreCompileInputs.cache
+Z:\DEV\TNovUtils\obj\R2022\TNovUtils.csproj.Up2Date
+Z:\DEV\TNovUtils\obj\R2022\TNovUtils.dll
+Z:\DEV\TNovUtils\obj\R2022\TNovUtils.pdb
