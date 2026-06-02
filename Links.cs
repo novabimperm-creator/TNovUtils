@@ -58,6 +58,12 @@ namespace TNovUtils
 
             TNovConfig config = TNovConfigLoad.LoadConfig(DBCommandName, TNovVersion);
 
+            if (config.LicenseType != "corp")
+            {
+                new InfoWindow280("Данный функционал доступен только при наличии Корпоративной лицензии!").ShowDialog();
+                return Result.Failed;
+            }
+
             #region Настройки логов
             // создание log - файла
             Logger.Initialize(DBCommandName, dateTime, TNovVersion);
