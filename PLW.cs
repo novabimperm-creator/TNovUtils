@@ -1,18 +1,18 @@
+using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
-using Autodesk.Revit.Attributes;
-using System.Collections.Generic;
-
-using System.Linq;
-using System;
-using System.Windows.Threading;
-using static System.Windows.Forms.LinkLabel;
-using System.IO;
-using System.Threading;
 using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Windows.Threading;
 using TNovCommon;
+using static System.Windows.Forms.LinkLabel;
 
 namespace TNovUtils
 {
@@ -519,15 +519,27 @@ namespace TNovUtils
                         }
                         else
                         {
-                            string name = name0.Replace("_", " "); //получаем имя уровня
-                            string[] nameparts = name.Split(new char[] { ' ' }); //делим имя пробелами
+                            string name = name0.Replace("_", " "); // получаем имя уровня
+
+                            // Убираем лишние пробелы: заменяем множественные пробелы на один, обрезаем края
+                            string cleanedName = Regex.Replace(name.Trim(), @"\s+", " ");
+
+                            // Делим имя пробелами и фильтруем пустые части
+                            string[] nameparts = cleanedName.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+                            if (nameparts.Length <= 1)
+                            {
+                                throw new InvalidOperationException("Недостаточно частей в имени уровня");
+                            }
+
                             string basicelev = nameparts[1];
 
-                            double elev = level.get_Parameter(BuiltInParameter.LEVEL_ELEV).AsDouble(); //получаем отметку уровня
+                            double elev = level.get_Parameter(BuiltInParameter.LEVEL_ELEV).AsDouble(); // получаем отметку уровня
                             elev = elev * 0.3048;
 
                             string elevstr = string.Format("{0:0.000}", elev);
-                            name = name.Replace(basicelev, elevstr);
+                            name = cleanedName.Replace(basicelev, elevstr);
+
                             try
                             {
                                 level.LookupParameter("Имя")?.Set(name);
