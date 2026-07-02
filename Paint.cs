@@ -146,13 +146,27 @@ namespace TNovUtils
     }
     public class SurfaceSelectionFilter : ISelectionFilter
     {
-        public bool AllowElement(Element element) => element.Category.Id.IntegerValue != -2001352;
+        public bool AllowElement(Element element) 
+        {
+#if R2022
+            return element.Category.Id.IntegerValue != -2001352; 
+#else
+            return element.Category.Id.Value != -2001352;
+#endif
+        }
 
         public bool AllowReference(Reference refer, XYZ point) => refer.ElementReferenceType.ToString() == "REFERENCE_TYPE_SURFACE";
     }
     public class PaintableSelectionFilter : ISelectionFilter
     {
-        public bool AllowElement(Element element) => element.Category.Id.IntegerValue != -2001352;
+        public bool AllowElement(Element element) 
+        {
+#if R2022
+            return element.Category.Id.IntegerValue != -2001352; 
+#else
+            return element.Category.Id.Value != -2001352;
+#endif
+        }
 
         public bool AllowReference(Reference refer, XYZ point) => refer.ElementReferenceType.ToString() == "REFERENCE_TYPE_SURFACE";
     }

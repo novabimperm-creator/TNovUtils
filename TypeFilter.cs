@@ -65,6 +65,7 @@ namespace TNovUtils
         -2008066,
         -2000301
       };
+#if R2022
             List<Category> list1 = new FilteredElementCollector(doc, activeView.Id).WhereElementIsNotElementType().ToElements()
                 .Where<Element>((Func<Element, bool>)(e => e.Category != null))
                 .Where<Element>((Func<Element, bool>)(e => !ignoreCategoryId.Contains(e.Category.Id.IntegerValue)))
@@ -73,6 +74,16 @@ namespace TNovUtils
                 .OrderBy<Category, string>((Func<Category, string>)(c => c.Name), 
                 (IComparer<string>)new AlphanumComparatorFastString())
                 .ToList<Category>();
+#else
+            List<Category> list1 = new FilteredElementCollector(doc, activeView.Id).WhereElementIsNotElementType().ToElements()
+                .Where<Element>((Func<Element, bool>)(e => e.Category != null))
+                .Where<Element>((Func<Element, bool>)(e => !ignoreCategoryId.Contains((int)e.Category.Id.Value)))
+                .Select<Element, Category>((Func<Element, Category>)(e => e.Category))
+                .Distinct<Category>((IEqualityComparer<Category>)new CategoryComparer())
+                .OrderBy<Category, string>((Func<Category, string>)(c => c.Name),
+                (IComparer<string>)new AlphanumComparatorFastString())
+                .ToList<Category>();
+#endif
             List<TypeFilterCategoryViewModel> categories = new List<TypeFilterCategoryViewModel>();
             foreach (Category category1 in list1)
             {
@@ -97,7 +108,7 @@ namespace TNovUtils
                     });
                 categories.Add(categoryViewModel);
             }
-            #endregion
+#endregion
 
             #region Окно
             TypeFilterWPF visibilityFilterWpf = new TypeFilterWPF(categories);
@@ -167,13 +178,22 @@ namespace TNovUtils
                         using (Transaction transaction = new Transaction(doc))
                         {
                             int num7 = (int)transaction.Start("Фильтр");
+#if R2022
                             List<ElementId> list2 = selectedElementTypes.Where<TypeFilterElementTypeViewModel>((Func<TypeFilterElementTypeViewModel, bool>)(et => et.ElementType.Category.Id.IntegerValue != -2001352)).Select<TypeFilterElementTypeViewModel, ElementId>((Func<TypeFilterElementTypeViewModel, ElementId>)(et => et.ElementType.Category.Id)).ToList<ElementId>();
+#else
+                            List<ElementId> list2 = selectedElementTypes.Where<TypeFilterElementTypeViewModel>((Func<TypeFilterElementTypeViewModel, bool>)(et => et.ElementType.Category.Id.Value != -2001352)).Select<TypeFilterElementTypeViewModel, ElementId>((Func<TypeFilterElementTypeViewModel, ElementId>)(et => et.ElementType.Category.Id)).ToList<ElementId>();
+#endif
                             IList<FilterRule> filterRules = (IList<FilterRule>)new List<FilterRule>();
                             ElementId parameter = new ElementId(BuiltInParameter.SYMBOL_NAME_PARAM);
                             foreach (TypeFilterElementTypeViewModel elementTypeViewModel in selectedElementTypes)
                             {
+#if R2022
                                 if (elementTypeViewModel.ElementType.Category.Id.IntegerValue != -2001352)
                                     filterRules.Add(ParameterFilterRuleFactory.CreateEqualsRule(parameter, elementTypeViewModel.ElementType.Name, true));
+#else
+                                if (elementTypeViewModel.ElementType.Category.Id.Value != -2001352)
+                                    filterRules.Add(ParameterFilterRuleFactory.CreateEqualsRule(parameter, elementTypeViewModel.ElementType.Name));
+#endif
                             }
                             if (filterRules.Count != 0)
                             {
@@ -182,20 +202,28 @@ namespace TNovUtils
                                 //проверяем, включен ли шаблон вида и контролирует ли шаблон фильтры
                                 bool addFilterToTemplate = false;
                                 ElementId templateId = doc.ActiveView.get_Parameter(BuiltInParameter.VIEW_TEMPLATE).AsElementId();
-                                if(templateId != null && templateId.IntegerValue != -1)
+                                if (templateId != null)
                                 {
-                                    //проверяем шаблон вида на предмет отключенной галочки "Фильтры"
-                                    ElementId elementId = new ElementId(-1006964); //id отключенной галочки Фильтры (получен опытным путем)
-                                    View template = (View)doc.GetElement(templateId);
-                                    ICollection<ElementId> elementIds = template.GetNonControlledTemplateParameterIds();
-                                    bool filtersDisabled = elementIds.Contains(elementId);
-                                    if (!filtersDisabled)
+#if R2022
+                    long idint =  templateId.IntegerValue;
+#else
+                                    long idint = templateId.Value;
+#endif      
+                                    if (idint != -1)
                                     {
-                                        addFilterToTemplate = true;
-                                        //добавляем фильтр к шаблону вида
-                                        Logger.Log("Добавляем фильтр к шаблону", 1);
-                                        template.AddFilter(newFilter.Id);
-                                        template.SetFilterVisibility(newFilter.Id, false);
+                                        //проверяем шаблон вида на предмет отключенной галочки "Фильтры"
+                                        ElementId elementId = new ElementId(-1006964); //id отключенной галочки Фильтры (получен опытным путем)
+                                        View template = (View)doc.GetElement(templateId);
+                                        ICollection<ElementId> elementIds = template.GetNonControlledTemplateParameterIds();
+                                        bool filtersDisabled = elementIds.Contains(elementId);
+                                        if (!filtersDisabled)
+                                        {
+                                            addFilterToTemplate = true;
+                                            //добавляем фильтр к шаблону вида
+                                            Logger.Log("Добавляем фильтр к шаблону", 1);
+                                            template.AddFilter(newFilter.Id);
+                                            template.SetFilterVisibility(newFilter.Id, false);
+                                        }
                                     }
                                 }
                                 if (!addFilterToTemplate)
@@ -218,7 +246,7 @@ namespace TNovUtils
                         return Result.Cancelled;
                     }
             }
-            #endregion
+#endregion
             Logger.Log("Завершение работы", 5);
             return Result.Succeeded;
         }
