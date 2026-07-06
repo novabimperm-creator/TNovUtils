@@ -1,0 +1,261 @@
+<Window x:Class="TNovUtils.Issues.UI.IssuesWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="TNovPRO · Вопросы" Height="680" Width="1180"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        Background="#F3F4F6" Loaded="Window_Loaded">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- Фирменные стили кнопок TNovCommon (как в остальных окнах TNovUtils) -->
+                <ResourceDictionary Source="/TNovCommon;component/ButtonStyles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        <SolidColorBrush x:Key="Emerald" Color="#008E43"/>
+        <SolidColorBrush x:Key="EmeraldDark" Color="#00713A"/>
+        <SolidColorBrush x:Key="Ink" Color="#111827"/>
+        <SolidColorBrush x:Key="Muted" Color="#6B7280"/>
+        <SolidColorBrush x:Key="Line" Color="#E5E7EB"/>
+        <SolidColorBrush x:Key="Card" Color="#FFFFFF"/>
+
+        <!-- Зелёная кнопка -->
+        <Style x:Key="PrimaryButton" TargetType="Button">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="{StaticResource Emerald}"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border CornerRadius="8" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="{StaticResource EmeraldDark}"/></Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Светлая кнопка -->
+        <Style x:Key="GhostButton" TargetType="Button">
+            <Setter Property="Foreground" Value="{StaticResource Ink}"/>
+            <Setter Property="Background" Value="{StaticResource Card}"/>
+            <Setter Property="Padding" Value="12,7"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border CornerRadius="8" Background="{TemplateBinding Background}" BorderBrush="{StaticResource Line}" BorderThickness="1" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="#F9FAFB"/></Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Статус-«пилюля» (RadioButton, одиночный выбор) -->
+        <Style x:Key="Pill" TargetType="RadioButton">
+            <Setter Property="Margin" Value="0,0,6,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Foreground" Value="{StaticResource Ink}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="b" CornerRadius="16" Background="{StaticResource Card}"
+                                BorderBrush="{StaticResource Line}" BorderThickness="1" Padding="12,5">
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="b" Property="Background" Value="{StaticResource Emerald}"/>
+                                <Setter TargetName="b" Property="BorderBrush" Value="{StaticResource Emerald}"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="b" Property="BorderBrush" Value="{StaticResource Emerald}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="Combo" TargetType="ComboBox">
+            <Setter Property="Padding" Value="8,5"/>
+            <Setter Property="MinWidth" Value="140"/>
+            <Setter Property="Margin" Value="0,0,6,0"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <DockPanel Margin="16,12,16,12">
+
+        <!-- Шапка -->
+        <Grid DockPanel.Dock="Top" Margin="0,0,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Orientation="Horizontal">
+                <Viewbox Width="34" Height="34" Margin="0,0,12,0">
+                    <Canvas Width="24" Height="24">
+                        <Path Data="M12,2 L22,7 L12,12 L2,7 Z" Fill="#008E43"/>
+                        <Path Data="M2,12 L12,17 L22,12" Stroke="#008E43" StrokeThickness="2" StrokeLineJoin="Round"/>
+                        <Path Data="M2,17 L12,22 L22,17" Stroke="#008E43" StrokeThickness="2" StrokeLineJoin="Round"/>
+                    </Canvas>
+                </Viewbox>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="Вопросы" FontSize="22" FontWeight="Bold" Foreground="{StaticResource Ink}"/>
+                    <TextBlock x:Name="SubTitle" Text="BIM-замечания и коллизии" FontSize="12" Foreground="{StaticResource Muted}"/>
+                </StackPanel>
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button x:Name="NetCheckButton" Style="{StaticResource GhostButton}" Margin="0,0,10,0" Click="NetCheck_Click" ToolTip="Проверить связь с TNovPRO" Content="Проверка сети"/>
+                <Button x:Name="LogoutButton" Style="{StaticResource GhostButton}" Margin="0,0,10,0" Click="Logout_Click" ToolTip="Выйти из профиля TNovPRO" Content="Выход"/>
+                <Button x:Name="RefreshButton" Style="{StaticResource GhostButton}" Margin="0,0,10,0" Click="Refresh_Click" ToolTip="Обновить" Content="⟳" FontSize="15"/>
+                <Button x:Name="CreateButton" Style="{StaticResource PrimaryButton}" Click="Create_Click" Content="+  Добавить"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Панель фильтров -->
+        <Border DockPanel.Dock="Top" Margin="0,0,0,12" Padding="0,0,0,12" BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1">
+            <WrapPanel Orientation="Horizontal">
+                <!-- Поиск -->
+                <Border CornerRadius="8" Background="{StaticResource Card}" BorderBrush="{StaticResource Line}" BorderThickness="1" Margin="0,0,12,6" Width="240">
+                    <Grid>
+                        <TextBlock Text="🔍" Margin="8,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource Muted}"/>
+                        <TextBox x:Name="SearchBox" BorderThickness="0" Background="Transparent" Padding="28,7,8,7"
+                                 VerticalContentAlignment="Center" TextChanged="Search_Changed"/>
+                        <TextBlock x:Name="SearchPlaceholder" Text="Поиск по содержанию…" Margin="28,0,0,0"
+                                   VerticalAlignment="Center" Foreground="#9CA3AF" IsHitTestVisible="False"/>
+                    </Grid>
+                </Border>
+
+                <!-- Статус-пилюли -->
+                <StackPanel Orientation="Horizontal" Margin="0,0,12,6">
+                    <RadioButton x:Name="PillAll" GroupName="st" Style="{StaticResource Pill}" Tag="" IsChecked="True" Checked="StatusPill_Checked" Content="Все"/>
+                    <RadioButton GroupName="st" Style="{StaticResource Pill}" Tag="new" Checked="StatusPill_Checked">
+                        <StackPanel Orientation="Horizontal"><Ellipse Width="8" Height="8" Fill="#3B82F6" Margin="0,0,6,0"/><TextBlock Text="Новое"/></StackPanel>
+                    </RadioButton>
+                    <RadioButton GroupName="st" Style="{StaticResource Pill}" Tag="in_progress" Checked="StatusPill_Checked">
+                        <StackPanel Orientation="Horizontal"><Ellipse Width="8" Height="8" Fill="#F59E0B" Margin="0,0,6,0"/><TextBlock Text="В работе"/></StackPanel>
+                    </RadioButton>
+                    <RadioButton GroupName="st" Style="{StaticResource Pill}" Tag="completed" Checked="StatusPill_Checked">
+                        <StackPanel Orientation="Horizontal"><Ellipse Width="8" Height="8" Fill="#008E43" Margin="0,0,6,0"/><TextBlock Text="Выполнено"/></StackPanel>
+                    </RadioButton>
+                    <RadioButton GroupName="st" Style="{StaticResource Pill}" Tag="closed" Checked="StatusPill_Checked">
+                        <StackPanel Orientation="Horizontal"><Ellipse Width="8" Height="8" Fill="#9CA3AF" Margin="0,0,6,0"/><TextBlock Text="Закрыто"/></StackPanel>
+                    </RadioButton>
+                </StackPanel>
+
+                <ComboBox x:Name="ProjectCombo" Style="{StaticResource Combo}" SelectionChanged="ServerFilter_Changed"/>
+                <ComboBox x:Name="ModelCombo" Style="{StaticResource Combo}" SelectionChanged="ServerFilter_Changed"/>
+                <ComboBox x:Name="AuthorCombo" Style="{StaticResource Combo}" SelectionChanged="ClientFilter_Changed"/>
+                <ComboBox x:Name="AssigneeCombo" Style="{StaticResource Combo}" SelectionChanged="ClientFilter_Changed"/>
+                <ToggleButton x:Name="MineToggle" Content="Мои" Click="ServerFilter_Changed" Padding="14,6" Cursor="Hand"/>
+            </WrapPanel>
+        </Border>
+
+        <!-- Низ: статус-строка -->
+        <Border DockPanel.Dock="Bottom" Background="Transparent" Padding="2,6,0,0" Margin="0,8,0,0">
+            <TextBlock x:Name="StatusBar" Text="Готово" Foreground="{StaticResource Muted}" FontSize="11"/>
+        </Border>
+
+        <!-- Контент: список + деталь -->
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="0" x:Name="DetailColumn"/>
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" CornerRadius="10" Background="{StaticResource Card}" BorderBrush="{StaticResource Line}" BorderThickness="1">
+                <Grid>
+                    <ListView x:Name="IssuesList" Background="Transparent" BorderThickness="0" SelectionChanged="IssuesList_SelectionChanged">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Width="46">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Button Content="→" Width="30" Padding="0" Tag="{Binding Id}" Style="{StaticResource GhostButton}"
+                                                    ToolTip="Перейти к элементу текущей модели" Click="RowGo_Click"/>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn Header="№" Width="50" DisplayMemberBinding="{Binding Number}"/>
+                                <GridViewColumn Header="Содержание" Width="360" DisplayMemberBinding="{Binding Description}"/>
+                                <GridViewColumn Header="Статус" Width="110" DisplayMemberBinding="{Binding StatusRu}"/>
+                                <GridViewColumn Header="Автор" Width="120" DisplayMemberBinding="{Binding Author}"/>
+                                <GridViewColumn Header="Фото" Width="50" DisplayMemberBinding="{Binding PhotoCount}"/>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+
+                    <!-- Пустое состояние -->
+                    <StackPanel x:Name="EmptyState" VerticalAlignment="Center" HorizontalAlignment="Center" Visibility="Collapsed">
+                        <Viewbox Width="56" Height="56" Margin="0,0,0,10">
+                            <Canvas Width="24" Height="24">
+                                <Path Data="M12,2 L22,7 L12,12 L2,7 Z" Stroke="#D1D5DB" StrokeThickness="1.6" StrokeLineJoin="Round"/>
+                                <Path Data="M2,12 L12,17 L22,12" Stroke="#D1D5DB" StrokeThickness="1.6" StrokeLineJoin="Round"/>
+                                <Path Data="M2,17 L12,22 L22,17" Stroke="#D1D5DB" StrokeThickness="1.6" StrokeLineJoin="Round"/>
+                            </Canvas>
+                        </Viewbox>
+                        <TextBlock Text="Вопросов нет." Foreground="{StaticResource Muted}" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <GridSplitter Grid.Column="1" Width="8" Background="Transparent" HorizontalAlignment="Center" VerticalAlignment="Stretch"/>
+
+            <Border Grid.Column="2" x:Name="DetailCard" CornerRadius="10" Background="{StaticResource Card}" BorderBrush="{StaticResource Line}" BorderThickness="1" Visibility="Collapsed">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="14">
+                    <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <TextBlock x:Name="DetailHeader" FontSize="15" FontWeight="Bold" TextWrapping="Wrap" Foreground="{StaticResource Ink}"/>
+                            <Button Grid.Column="1" Content="✕" Style="{StaticResource GhostButton}" Padding="8,2" Click="CloseDetail_Click"/>
+                        </Grid>
+                        <TextBlock x:Name="DetailMeta" Foreground="{StaticResource Muted}" Margin="0,2,0,10" FontSize="11"/>
+
+                        <TextBlock Text="Содержание" FontWeight="SemiBold"/>
+                        <TextBox x:Name="DetailDescription" Margin="0,2,0,10" Padding="6" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="90" VerticalScrollBarVisibility="Auto"/>
+
+                        <Grid Margin="0,0,0,2">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <TextBlock Text="Ответственные" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            <Button Grid.Column="1" x:Name="EditAssigneesButton" Content="Изменить" Style="{StaticResource GhostButton}" Padding="8,3" Click="EditAssignees_Click"/>
+                        </Grid>
+                        <TextBlock x:Name="DetailAssignees" TextWrapping="Wrap" Margin="0,2,0,10" Foreground="{StaticResource Ink}"/>
+
+                        <TextBlock Text="Модели и элементы" FontWeight="SemiBold"/>
+                        <ItemsControl x:Name="ModelsList" Margin="0,2,0,10">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" Margin="0,1">
+                                        <Button Content="Перейти" Width="74" Tag="{Binding ElementId}" Style="{StaticResource GhostButton}" Click="GoToElement_Click"/>
+                                        <TextBlock Text="{Binding SlotLabel}" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <TextBlock Text="Фото" FontWeight="SemiBold"/>
+                        <WrapPanel x:Name="PhotosPanel" Margin="0,2,0,10"/>
+
+                        <Button x:Name="SaveButton" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Left" Content="Сохранить содержание" Click="Save_Click"/>
+
+                        <TextBlock Text="Сменить статус" FontWeight="SemiBold" Margin="0,14,0,4"/>
+                        <WrapPanel x:Name="StatusActions"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+    </DockPanel>
+</Window>

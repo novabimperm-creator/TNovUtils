@@ -6,8 +6,28 @@
     <AssemblyName>TNovUtils</AssemblyName>
   </PropertyGroup>
 
+  <!-- Страховка для модуля Issues: константы конфигурации доступны, даже если
+       общий TNov.Build.props их не объявляет (дубликаты в DefineConstants безвредны). -->
+  <PropertyGroup Condition="'$(Configuration)' == 'R2022'">
+    <DefineConstants>$(DefineConstants);R2022</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'R2027'">
+    <DefineConstants>$(DefineConstants);R2027</DefineConstants>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+  </ItemGroup>
+
+  <!-- Issues (TNovPRO): DPAPI для хранения refresh-токена. На net48 ProtectedData
+       живёт в System.Security; на .NET 10 — только из NuGet-пакета. -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <Reference Include="System.Security" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Web" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' != 'net48'">
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="9.0.0" />
   </ItemGroup>
 
   <ItemGroup>
