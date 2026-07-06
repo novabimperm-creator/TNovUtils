@@ -1,0 +1,65 @@
+<Window x:Class="TNovUtils.Issues.UI.CreateIssueWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Новый вопрос" Height="560" Width="520"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        Loaded="Window_Loaded">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/TNovCommon;component/ButtonStyles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid Margin="14">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0">
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                <TextBlock Text="Модель: " FontWeight="Bold"/>
+                <TextBlock x:Name="ModelText"/>
+            </StackPanel>
+            <StackPanel x:Name="ProjectPanel" Visibility="Collapsed" Margin="0,4,0,4">
+                <TextBlock Text="Проект не определился по имени модели — выберите вручную:" Foreground="#C0392B" TextWrapping="Wrap"/>
+                <ComboBox x:Name="ProjectCombo" Margin="0,3,0,0" DisplayMemberPath="Name"/>
+            </StackPanel>
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" Margin="0,8,0,0">
+            <TextBlock Text="Содержание *" FontWeight="SemiBold"/>
+            <TextBox x:Name="DescriptionBox" Margin="0,2,0,8" Padding="3"
+                     AcceptsReturn="True" TextWrapping="Wrap" MinHeight="90" VerticalScrollBarVisibility="Auto"/>
+            <TextBlock Text="Ответственные" FontWeight="SemiBold"/>
+            <StackPanel Orientation="Horizontal" Margin="0,2,0,8">
+                <TextBlock x:Name="AssigneesText" Text="не выбраны" VerticalAlignment="Center"
+                           Margin="0,0,10,0" Foreground="#333" TextTrimming="CharacterEllipsis" MaxWidth="330"/>
+                <Button x:Name="PickAssigneesBtn" Content="Выбрать…" Click="PickAssignees_Click"/>
+            </StackPanel>
+
+            <TextBlock Text="Элемент текущей модели" FontWeight="SemiBold"/>
+            <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                <TextBlock x:Name="ElementText" Text="не выбран" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="#333"/>
+                <Button Content="Взять из выделения Revit" Click="GrabSelection_Click" Margin="0,0,6,0"/>
+                <Button Content="Очистить" Click="ClearElement_Click"/>
+            </StackPanel>
+        </StackPanel>
+
+        <DockPanel Grid.Row="2" Margin="0,10,0,0">
+            <TextBlock DockPanel.Dock="Top" Text="Фото" FontWeight="SemiBold" Margin="0,0,0,4"/>
+            <Button DockPanel.Dock="Bottom" Content="Добавить фото…" Click="AddPhotos_Click" Margin="0,4,0,0"/>
+            <ListBox x:Name="PhotosBox"/>
+        </DockPanel>
+
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+            <TextBlock x:Name="ErrorText" Foreground="#C0392B" VerticalAlignment="Center" Margin="0,0,12,0" TextWrapping="Wrap"/>
+            <Button Content="Отмена" Width="90" Margin="0,0,8,0" Click="Cancel_Click"/>
+            <Button x:Name="CreateBtn" Content="Создать" Width="120" IsDefault="True" Click="Create_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>
