@@ -43,3 +43,9 @@ Z:\DEV\_build-test\2022-fix\runtimes\win-x64\native\WebView2Loader.dll
 Z:\DEV\_build-test\2022-fix\TNovUtils.dll
 Z:\DEV\_build-test\2022-fix\TNovUtils.pdb
 \\fs-nova\Distr\0.For Admin\_TNov\build\2022\System.Resources.Extensions.dll
+Z:\DEV\TNovUtils\obj\R2022\Issues\UI\CreateIssueWindow.baml
+Z:\DEV\TNovUtils\obj\R2022\Issues\UI\IssuesWindow.baml
+Z:\DEV\TNovUtils\obj\R2022\Issues\UI\UserPickerWindow.baml
+Z:\DEV\TNovUtils\obj\R2022\Issues\UI\CreateIssueWindow.g.cs
+Z:\DEV\TNovUtils\obj\R2022\Issues\UI\IssuesWindow.g.cs
+Z:\DEV\TNovUtils\obj\R2022\Issues\UI\UserPickerWindow.g.cs
