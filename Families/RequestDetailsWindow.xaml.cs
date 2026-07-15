@@ -22,24 +22,24 @@ namespace TNovUtils
             tbDeadline.Text = request.Deadline?.ToString("dd.MM.yyyy HH:mm") ?? "не указан";
             tbDescription.Text = request.Description;
 
-            // Статус с цветом
+            // Статус с цветом (тёмная тема)
             tbStatus.Text = request.Status.ToString();
             switch (request.Status)
             {
                 case RequestStatus.Принято:
-                    tbStatus.Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0xB3, 0xB3));
+                    tbStatus.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xFF, 0x88, 0x88));
                     break;
                 case RequestStatus.В_работе:
-                    tbStatus.Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0xFF, 0xE0));
+                    tbStatus.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xFF, 0xE6, 0x80));
                     break;
                 case RequestStatus.На_согласовании:
-                    tbStatus.Foreground = new SolidColorBrush(Color.FromRgb(0xB3, 0xD9, 0xFF));
+                    tbStatus.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x88, 0xBB, 0xFF));
                     break;
                 case RequestStatus.Выполнено:
-                    tbStatus.Foreground = new SolidColorBrush(Color.FromRgb(0xB3, 0xFF, 0xB3));
+                    tbStatus.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x37, 0xC8, 0x71));
                     break;
                 case RequestStatus.Закрыто:
-                    tbStatus.Foreground = new SolidColorBrush(Color.FromRgb(0xD0, 0xD0, 0xD0));
+                    tbStatus.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x8F, 0xB3, 0xA2));
                     break;
             }
 

@@ -1,79 +1,130 @@
 ﻿<Window x:Class="TNovUtils.UnpinnerWPF"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:local="clr-namespace:TNovUtils"
-             mc:Ignorable="d" Height="160" Width="280"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:local="clr-namespace:TNovUtils"
+        mc:Ignorable="d"
+        Width="380"
+        SizeToContent="Height"
         d:DataContext="{d:DesignInstance local:UnpinnerViewModel}"
-            WindowStartupLocation="CenterScreen" 
-                                       AllowsTransparency="True"
-Background="Transparent" 
-            ResizeMode="NoResize" WindowStyle="None">
+        WindowStartupLocation="CenterScreen"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        WindowStyle="None">
+
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/TNovCommon;component/ButtonStyles.xaml"/>
+                <ResourceDictionary Source="/TNovCommon;component/Styles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Window.Resources>
+
     <WindowChrome.WindowChrome>
         <WindowChrome CaptionHeight="30"
-              ResizeBorderThickness="5"
-              GlassFrameThickness="0"
-              CornerRadius="12"/>
+                      ResizeBorderThickness="5"
+                      GlassFrameThickness="0"
+                      CornerRadius="12"/>
     </WindowChrome.WindowChrome>
+
     <Border CornerRadius="12"
-    Background="White"
-    BorderBrush="#FF008E43"
-    BorderThickness="1">
-        <Grid>
-            <!-- Верхняя панель (кастомный заголовок) -->
-            <Border Height="30" CornerRadius="12 12 0 0"
-    Background="#FF008E43" 
-    VerticalAlignment="Top"
-    MouseDown="Border_MouseDown">
-                <StackPanel Orientation="Horizontal">
-                    <Button Style="{StaticResource RoundButtonStyle}" 
-Click="escButton_Click" Content="✕"
-HorizontalAlignment="Center" VerticalAlignment="Center"
-Width="20" Height="20" Margin="5,0"
-WindowChrome.IsHitTestVisibleInChrome="True"/>
-                    <Button Style="{StaticResource RoundButtonStyle2}" 
-Click="HelpButton_Click" Content="?"
-HorizontalAlignment="Center" VerticalAlignment="Center"
-Width="20" Height="20" Margin="0"
-WindowChrome.IsHitTestVisibleInChrome="True"/>
-                    <TextBlock Text="Откреплятор" 
-Foreground="White"
-VerticalAlignment="Center"
-Margin="10,0"/>
-                </StackPanel>
-
+            Background="{StaticResource BgBrush}"
+            BorderBrush="{StaticResource AccentBrush}"
+            BorderThickness="1">
+        <StackPanel Margin="18">
+            <Border MouseDown="TitleBar_MouseDown"
+                    Background="Transparent"
+                    Cursor="Arrow"
+                    Margin="0,0,0,12">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="35"/>
+                        <ColumnDefinition Width="35"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="ОТКРЕПЛЯТОР"
+                               Grid.Column="0"
+                               Foreground="{StaticResource AccentBrush}"
+                               FontSize="20"
+                               FontWeight="Bold"
+                               VerticalAlignment="Center"/>
+                    <Button Content="i"
+                            Grid.Column="1"
+                            Style="{StaticResource CloseButtonStyleMini}"
+                            Click="HelpButton_Click"
+                            WindowChrome.IsHitTestVisibleInChrome="True"/>
+                    <Button Content="✕"
+                            Grid.Column="2"
+                            Style="{StaticResource CloseButtonStyleMini}"
+                            Click="escButton_Click"
+                            WindowChrome.IsHitTestVisibleInChrome="True"/>
+                </Grid>
             </Border>
 
-            <!-- Основное содержимое -->
-            <Border Margin="0,30,0,0">
-                <StackPanel VerticalAlignment="Center" Margin="5">
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <TextBlock Margin="5" Text="Выберите категории для снятия закрепления:" />
-                    </StackPanel>
+            <TextBlock Text="Выберите категории для снятия закрепления:"
+                       Foreground="{StaticResource MutedBrush}"
+                       TextWrapping="Wrap"
+                       Margin="0,0,0,12"/>
 
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <CheckBox x:Name="checkBox1" IsThreeState="False" IsChecked="{Binding grids}" Content="Оси" Margin="5" BorderBrush="#CCCCCC"/>
-                        <CheckBox x:Name="checkBox2" IsThreeState="False" IsChecked="{Binding levels}" Content="Уровни" Margin="5" BorderBrush="#CCCCCC"/>
-                        <CheckBox x:Name="checkBox3" IsThreeState="False" IsChecked="{Binding links}" Content="Связи" Margin="5" BorderBrush="#CCCCCC"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <Button Style="{StaticResource CustomButtonStyle}" Content="Отмена" x:Name="escButton" IsCancel="True" Click="escButton_Click" MinWidth="60" MinHeight="25" Margin="5" />
-                        <Button Style="{StaticResource CustomButtonStyle}" Content="Запуск" x:Name="acceptButton" IsDefault="True" Click="acceptButton_Click" MinWidth="120" Margin="5"/>
-                    </StackPanel>
+            <Grid Margin="0,0,0,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <ToggleButton x:Name="checkBox1"
+                              Grid.Column="0"
+                              Style="{StaticResource CardToggleStyle}"
+                              Margin="0"
+                              IsChecked="{Binding grids}">
+                    <TextBlock Text="Оси"
+                               Style="{StaticResource CardTitleStyle}"
+                               HorizontalAlignment="Center"/>
+                </ToggleButton>
+                <ToggleButton x:Name="checkBox2"
+                              Grid.Column="2"
+                              Style="{StaticResource CardToggleStyle}"
+                              Margin="0"
+                              IsChecked="{Binding levels}">
+                    <TextBlock Text="Уровни"
+                               Style="{StaticResource CardTitleStyle}"
+                               HorizontalAlignment="Center"/>
+                </ToggleButton>
+                <ToggleButton x:Name="checkBox3"
+                              Grid.Column="4"
+                              Style="{StaticResource CardToggleStyle}"
+                              Margin="0"
+                              IsChecked="{Binding links}">
+                    <TextBlock Text="Связи"
+                               Style="{StaticResource CardTitleStyle}"
+                               HorizontalAlignment="Center"/>
+                </ToggleButton>
+            </Grid>
 
-                </StackPanel>
-
-
-            </Border>
-        </Grid>
-
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Button Grid.Column="0"
+                        Content="Отмена"
+                        x:Name="escButton"
+                        Style="{StaticResource CloseButtonStyle}"
+                        IsCancel="True"
+                        Click="escButton_Click"/>
+                <Button Grid.Column="2"
+                        Content="Запуск"
+                        x:Name="acceptButton"
+                        Style="{StaticResource RunButtonStyle}"
+                        Margin="0"
+                        IsDefault="True"
+                        Click="acceptButton_Click"/>
+            </Grid>
+        </StackPanel>
     </Border>
 </Window>

@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using TNovUtils.Issues.Api;
 
 namespace TNovUtils.Issues.UI
@@ -86,6 +87,12 @@ namespace TNovUtils.Issues.UI
         {
             DialogResult = false;
             Close();
+        }
+
+        private void TitleBar_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton == MouseButton.Left)
+                DragMove();
         }
     }
 }

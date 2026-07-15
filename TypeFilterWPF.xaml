@@ -4,136 +4,200 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:local="clr-namespace:TNovUtils"
-        xmlns:sys="clr-namespace:System;assembly=mscorlib"
-        KeyDown="VisibilityFilterWPF_KeyDown" Height="510" Width="420" MinHeight="400" MinWidth="400"
-        
-        
-    WindowStartupLocation="CenterScreen" 
-                                       AllowsTransparency="True"
-Background="Transparent" 
-            ResizeMode="NoResize" WindowStyle="None">
+        mc:Ignorable="d"
+        Height="520"
+        Width="430"
+        MinHeight="400"
+        MinWidth="400"
+        KeyDown="VisibilityFilterWPF_KeyDown"
+        WindowStartupLocation="CenterScreen"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        WindowStyle="None">
+
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/TNovCommon;component/ButtonStyles.xaml"/>
+                <ResourceDictionary Source="/TNovCommon;component/Styles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Window.Resources>
+
     <WindowChrome.WindowChrome>
         <WindowChrome CaptionHeight="30"
-              ResizeBorderThickness="5"
-              GlassFrameThickness="0"
-              CornerRadius="12"/>
+                      ResizeBorderThickness="5"
+                      GlassFrameThickness="0"
+                      CornerRadius="12"/>
     </WindowChrome.WindowChrome>
-    <Border CornerRadius="12"
-    Background="White"
-    BorderBrush="#FF008E43"
-    BorderThickness="1">
 
-        <Grid>
+    <Border CornerRadius="12"
+            Background="{StaticResource BgBrush}"
+            BorderBrush="{StaticResource AccentBrush}"
+            BorderThickness="1">
+        <Grid Margin="18">
             <Grid.RowDefinitions>
-                <RowDefinition Height="30"/>
-                <RowDefinition Height="40"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
-                <RowDefinition Height="50"/>
-                <RowDefinition Height="50"/>
-                <RowDefinition Height="50"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <StackPanel VerticalAlignment="Center"   Grid.Row="0"  >
-                <Border Height="30" CornerRadius="12 12 0 0"
-    Background="#FF008E43" 
-    VerticalAlignment="Top"
-    MouseDown="Border_MouseDown">
-                    <StackPanel Orientation="Horizontal">
-                        <Button Style="{StaticResource RoundButtonStyle}" 
-Click="btn_Ok_Click" Content="✕"
-HorizontalAlignment="Center" VerticalAlignment="Center"
-Width="20" Height="20" Margin="5,0"
-WindowChrome.IsHitTestVisibleInChrome="True"/>
-                        <Button Style="{StaticResource RoundButtonStyle2}" 
-Click="HelpButton_Click" Content="?"
-HorizontalAlignment="Center" VerticalAlignment="Center"
-Width="20" Height="20" Margin="0"
-WindowChrome.IsHitTestVisibleInChrome="True"/>
-                        <TextBlock Text="Типофильтр" 
-Foreground="White"
-VerticalAlignment="Center"
-Margin="10,0"/>
-                    </StackPanel>
-
-                </Border>
-
-            </StackPanel>
-
-            <DockPanel Grid.Row="1" Margin="10,8,10,4">
+            <Border Grid.Row="0"
+                    MouseDown="TitleBar_MouseDown"
+                    Background="Transparent"
+                    Cursor="Arrow"
+                    Margin="0,0,0,12">
                 <Grid>
-                    <TextBox BorderBrush="#CCCCCC" TextChanged="tbSearch_TextChanged" x:Name="tbSearch" VerticalAlignment="Center" Height="24"
-                 Padding="6,0" VerticalContentAlignment="Center" ToolTip="Поиск по имени типа"/>
-                    <TextBlock Margin="8,0,0,0" VerticalAlignment="Center" IsHitTestVisible="false"
-                   FontSize="{Binding FontSize, ElementName=tbSearch}">
-          <FrameworkElement.Style>
-            <Style TargetType="{x:Type TextBlock}">
-              <Setter Property="TextBlock.Text" Value="Поиск типов..."/>
-              <Setter Property="UIElement.Visibility" Value="Collapsed"/>
-              <Style.Triggers>
-                <MultiDataTrigger>
-                  <MultiDataTrigger.Conditions>
-                    <Condition Binding="{Binding Text, ElementName=tbSearch}" Value=""/>
-                    <Condition Binding="{Binding IsFocused, ElementName=tbSearch}" Value="False"/>
-                  </MultiDataTrigger.Conditions>
-                  <Setter Property="UIElement.Visibility" Value="Visible"/>
-                </MultiDataTrigger>
-              </Style.Triggers>
-            </Style>
-          </FrameworkElement.Style>
-                    </TextBlock>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="35"/>
+                        <ColumnDefinition Width="35"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="ТИПОФИЛЬТР"
+                               Grid.Column="0"
+                               Foreground="{StaticResource AccentBrush}"
+                               FontSize="20"
+                               FontWeight="Bold"
+                               VerticalAlignment="Center"/>
+                    <Button Content="i"
+                            Grid.Column="1"
+                            Style="{StaticResource CloseButtonStyleMini}"
+                            Click="HelpButton_Click"
+                            WindowChrome.IsHitTestVisibleInChrome="True"/>
+                    <Button Content="✕"
+                            Grid.Column="2"
+                            Style="{StaticResource CloseButtonStyleMini}"
+                            Click="btn_Ok_Click"
+                            WindowChrome.IsHitTestVisibleInChrome="True"/>
                 </Grid>
-            </DockPanel>
-            <TreeView x:Name="categoryTreeView" Grid.Row="2" Margin="10" Padding="1,5" BorderBrush="#CCCCCC"
-              VirtualizingPanel.IsVirtualizing="true" VirtualizingPanel.VirtualizationMode="Recycling">
-                <FrameworkElement.Resources>
-                    <Style TargetType="{x:Type ContentPresenter}">
-                        <Setter Property="ContentPresenter.RecognizesAccessKey" Value="false"/>
-                    </Style>
-                    <DataTemplate DataType="{x:Type local:TypeFilterElementTypeViewModel}">
-                        <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}">
-                            <TextBlock Text="{Binding Name}"/>
-                        </CheckBox>
-                    </DataTemplate>
-                    <HierarchicalDataTemplate x:Key="{DataTemplateKey {x:Type local:TypeFilterCategoryViewModel}}"
-                  DataType="{x:Type local:TypeFilterCategoryViewModel}" ItemsSource="{Binding ElementTypesView}">
-                        <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}">
-                            <TextBlock Text="{Binding Name}"/>
-                        </CheckBox>
-                    </HierarchicalDataTemplate>
-                </FrameworkElement.Resources>
-            </TreeView>
-            <Grid Row="3" Margin="0,0,0,0">
+            </Border>
+
+            <Grid Grid.Row="1" Margin="0,0,0,10">
+                <TextBox x:Name="tbSearch"
+                         Style="{StaticResource DarkTextBoxStyle}"
+                         Height="36"
+                         VerticalContentAlignment="Center"
+                         ToolTip="Поиск по имени типа"
+                         TextChanged="tbSearch_TextChanged"/>
+                <TextBlock Margin="10,0,0,0"
+                           VerticalAlignment="Center"
+                           IsHitTestVisible="False"
+                           Foreground="{StaticResource MutedBrush}">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Text" Value="Поиск типов..."/>
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding Text, ElementName=tbSearch}" Value=""/>
+                                        <Condition Binding="{Binding IsFocused, ElementName=tbSearch}" Value="False"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </MultiDataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </Grid>
+
+            <Border Grid.Row="2"
+                    Style="{StaticResource PanelFrameStyle}"
+                    Margin="0,0,0,10"
+                    Padding="8,6">
+                <TreeView x:Name="categoryTreeView"
+                          Style="{StaticResource DarkTreeViewStyle}"
+                          ItemContainerStyle="{StaticResource DarkTreeViewItemStyle}"
+                          VirtualizingPanel.IsVirtualizing="True"
+                          VirtualizingPanel.VirtualizationMode="Recycling"
+                          ScrollViewer.VerticalScrollBarVisibility="Auto">
+                    <TreeView.Resources>
+                        <Style TargetType="ContentPresenter">
+                            <Setter Property="RecognizesAccessKey" Value="False"/>
+                        </Style>
+                        <DataTemplate DataType="{x:Type local:TypeFilterElementTypeViewModel}">
+                            <StackPanel Orientation="Horizontal">
+                                <ToggleButton IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                              Style="{StaticResource TreeCheckToggleStyle}"/>
+                                <TextBlock Text="{Binding Name}"
+                                           Foreground="White"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </DataTemplate>
+                        <HierarchicalDataTemplate DataType="{x:Type local:TypeFilterCategoryViewModel}"
+                                                  ItemsSource="{Binding ElementTypesView}">
+                            <StackPanel Orientation="Horizontal">
+                                <ToggleButton IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                              Style="{StaticResource TreeCheckToggleStyle}"
+                                              Checked="CategoryCheckBox_Checked"
+                                              Unchecked="CategoryCheckBox_Checked"/>
+                                <TextBlock Text="{Binding Name}"
+                                           Foreground="White"
+                                           FontWeight="SemiBold"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </HierarchicalDataTemplate>
+                    </TreeView.Resources>
+                </TreeView>
+            </Border>
+
+            <UniformGrid Grid.Row="3"
+                         Columns="3"
+                         Margin="0,0,0,10">
+                <Button x:Name="btn_Hide"
+                        Content="Скрыть"
+                        Style="{StaticResource SecondaryButtonStyle}"
+                        Padding="8,6"
+                        MinHeight="32"
+                        Margin="0,0,4,0"
+                        Click="btn_Hide_Click"/>
+                <Button x:Name="btn_Isolate"
+                        Content="Изолировать"
+                        Style="{StaticResource SecondaryButtonStyle}"
+                        Padding="8,6"
+                        MinHeight="32"
+                        Margin="2,0"
+                        Click="btn_Isolate_Click"/>
+                <Button x:Name="btn_Select"
+                        Content="Выбрать"
+                        Style="{StaticResource SecondaryButtonStyle}"
+                        Padding="8,6"
+                        MinHeight="32"
+                        Margin="4,0,0,0"
+                        Click="btn_Select_Click"/>
+            </UniformGrid>
+
+            <Grid Grid.Row="4" Margin="0,0,0,10">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <Button Click="btn_Hide_Click" x:Name="btn_Hide" Content="Скрыть" Margin="10,0" VerticalAlignment="Center"
-              Height="25" Width="100" HorizontalAlignment="Left" Style="{StaticResource CustomButtonStyle}" />
-                <Button Click="btn_Isolate_Click" x:Name="btn_Isolate" Content="Изолировать" Margin="10,0"
-              VerticalAlignment="Center" Height="25" Width="100" Grid.Column="1" Style="{StaticResource CustomButtonStyle}" />
-                <Button Click="btn_Select_Click" x:Name="btn_Select" Content="Выбрать" Margin="10,0"
-              VerticalAlignment="Center" Height="25" Width="100" Grid.Column="2" HorizontalAlignment="Right" Style="{StaticResource CustomButtonStyle}" />
+                <TextBox x:Name="textBox_FilterName"
+                         Style="{StaticResource DarkTextBoxStyle}"
+                         Height="36"
+                         VerticalContentAlignment="Center"
+                         TextAlignment="Center"/>
+                <Button Grid.Column="2"
+                        x:Name="btn_CreateFilter"
+                        Content="Скрыть фильтром"
+                        Style="{StaticResource SecondaryButtonStyle}"
+                        Padding="10,6"
+                        MinHeight="36"
+                        MinWidth="140"
+                        Click="btn_CreateFilter_Click"/>
             </Grid>
-            <Grid Row="4">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="160"/>
-                </Grid.ColumnDefinitions>
-                <TextBox x:Name="textBox_FilterName" Height="26" Margin="10,0" VerticalAlignment="Center"
-               VerticalContentAlignment="Center" HorizontalContentAlignment="Center" BorderBrush="#CCCCCC"/>
-                <Button Click="btn_CreateFilter_Click" x:Name="btn_CreateFilter" Content="Скрыть фильтром" Margin="0"
-              VerticalAlignment="Center" Width="140" Height="25" Grid.Column="1" Style="{StaticResource CustomButtonStyle}" />
-            </Grid>
-            <Button Click="btn_Ok_Click" x:Name="btn_Ok" Content="Уйти" Grid.Row="5" HorizontalAlignment="Right"
-            Margin="0,0,10,10" VerticalAlignment="Bottom" Width="100" Height="25" Style="{StaticResource CustomButtonStyle}" />
+
+            <Button Grid.Row="5"
+                    x:Name="btn_Ok"
+                    Content="Уйти"
+                    Style="{StaticResource RunButtonStyle}"
+                    HorizontalAlignment="Stretch"
+                    Margin="0"
+                    Click="btn_Ok_Click"/>
         </Grid>
     </Border>
 </Window>

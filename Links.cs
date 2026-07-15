@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Interop;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 using TNovCommon;
@@ -114,6 +115,7 @@ namespace TNovUtils
             Logger.Log("Диалоговое окно", 1);
             RevitServerViewModel viewModel = new RevitServerViewModel(linksString);
             var wpfview = new RevitServer(viewModel);
+            new WindowInteropHelper(wpfview) { Owner = uiApp.MainWindowHandle };
             viewModel.CloseRequest += (s, ea) => wpfview.Close();
             bool? ok = wpfview.ShowDialog();
             if (ok != null && ok == true) { }

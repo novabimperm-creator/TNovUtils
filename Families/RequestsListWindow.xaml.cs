@@ -87,22 +87,22 @@ namespace TNovUtils
                 switch (request.Status)
                 {
                     case RequestStatus.Принято:
-                        e.Row.Background = new SolidColorBrush(Color.FromRgb(0xFF, 0xB3, 0xB3));
+                        e.Row.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x3D, 0x25, 0x25));
                         break;
                     case RequestStatus.В_работе:
-                        e.Row.Background = new SolidColorBrush(Color.FromRgb(0xFF, 0xFF, 0xE0));
+                        e.Row.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x3D, 0x3A, 0x25));
                         break;
                     case RequestStatus.На_согласовании:
-                        e.Row.Background = new SolidColorBrush(Color.FromRgb(0xB3, 0xD9, 0xFF));
+                        e.Row.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x25, 0x30, 0x35));
                         break;
                     case RequestStatus.Выполнено:
-                        e.Row.Background = new SolidColorBrush(Color.FromRgb(0xB3, 0xFF, 0xB3));
+                        e.Row.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x25, 0x3D, 0x2A));
                         break;
                     case RequestStatus.Закрыто:
-                        e.Row.Background = new SolidColorBrush(Color.FromRgb(0xD0, 0xD0, 0xD0));
+                        e.Row.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x2E, 0x34, 0x2F));
                         break;
                     default:
-                        e.Row.Background = new SolidColorBrush(Colors.White);
+                        e.Row.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x1E, 0x2E, 0x26));
                         break;
                 }
             }

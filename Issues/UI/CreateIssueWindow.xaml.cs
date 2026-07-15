@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Input;
 using TNovUtils.Issues.Api;
 using TNovUtils.Issues.Revit;
 
@@ -209,6 +210,12 @@ namespace TNovUtils.Issues.UI
         private void Cancel_Click(object sender, RoutedEventArgs e)
         {
             Close();
+        }
+
+        private void TitleBar_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton == MouseButton.Left)
+                DragMove();
         }
     }
 }

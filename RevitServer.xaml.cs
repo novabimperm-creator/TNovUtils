@@ -6,6 +6,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Data;
+using System.Windows.Input;
 
 namespace TNovUtils
 {
@@ -34,9 +35,10 @@ namespace TNovUtils
             this.Close(); // закрытие окна
         }
 
-        private void Border_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        private void TitleBar_MouseDown(object sender, MouseButtonEventArgs e)
         {
-
+            if (e.ChangedButton == MouseButton.Left)
+                DragMove();
         }
     }
     public class InverseConverter : IValueConverter

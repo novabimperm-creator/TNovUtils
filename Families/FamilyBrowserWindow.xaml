@@ -1,94 +1,167 @@
 ﻿<Window x:Class="TNovUtils.FamilyBrowserWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Библиотека семейств" Height="500" Width="850"
-        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        Title="Библиотека семейств"
+        Height="520"
+        Width="870"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
         WindowStartupLocation="CenterScreen">
+
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/TNovCommon;component/ButtonStyles.xaml"/>
+                <ResourceDictionary Source="/TNovCommon;component/Styles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Window.Resources>
+
     <WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="30" ResizeBorderThickness="5"
-                      GlassFrameThickness="0" CornerRadius="12"/>
+        <WindowChrome CaptionHeight="30"
+                      ResizeBorderThickness="5"
+                      GlassFrameThickness="0"
+                      CornerRadius="12"/>
     </WindowChrome.WindowChrome>
-    <Border CornerRadius="12" Background="White" BorderBrush="#FF008E43"
+
+    <Border CornerRadius="12"
+            Background="{StaticResource BgBrush}"
+            BorderBrush="{StaticResource AccentBrush}"
             BorderThickness="1">
-        <Grid>
-            <!-- Заголовок -->
-            <Border Height="30" CornerRadius="12 12 0 0" Background="#FF008E43"
-                    VerticalAlignment="Top" MouseDown="TitleBar_MouseDown">
-                <StackPanel Orientation="Horizontal">
-                    <Button Style="{StaticResource RoundButtonStyle}" Content="✕"
+        <Grid Margin="18">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0"
+                    MouseDown="TitleBar_MouseDown"
+                    Background="Transparent"
+                    Cursor="Arrow"
+                    Margin="0,0,0,12">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="35"/>
+                        <ColumnDefinition Width="35"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="БИБЛИОТЕКА СЕМЕЙСТВ"
+                               Grid.Column="0"
+                               Foreground="{StaticResource AccentBrush}"
+                               FontSize="20"
+                               FontWeight="Bold"
+                               VerticalAlignment="Center"/>
+                    <Button Content="i"
+                            Grid.Column="1"
+                            Style="{StaticResource CloseButtonStyleMini}"
+                            Click="HelpButton_Click"
+                            WindowChrome.IsHitTestVisibleInChrome="True"/>
+                    <Button Content="✕"
+                            Grid.Column="2"
+                            Style="{StaticResource CloseButtonStyleMini}"
                             Click="CloseButton_Click"
-                            Width="20" Height="20" Margin="5,0"
                             WindowChrome.IsHitTestVisibleInChrome="True"/>
-                    <Button Style="{StaticResource RoundButtonStyle2}" 
-                            Click="HelpButton_Click" Content="?"
-                            HorizontalAlignment="Center" VerticalAlignment="Center"
-                            Width="20" Height="20" Margin="0"
-                            WindowChrome.IsHitTestVisibleInChrome="True"/>
-                    <TextBlock Text="Библиотека семейств" Foreground="White"
-                               VerticalAlignment="Center" Margin="10,0"/>
-                </StackPanel>
-            </Border>
-
-            <!-- Содержимое -->
-            <Border Margin="0,30,0,0">
-                <Grid Margin="10">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-
-                    <!-- Панель поиска и фильтрации -->
-                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
-                        <TextBlock Text="Поиск:" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                        <TextBox Name="SearchBox" Width="200" Margin="0,0,15,0"
-                                 TextChanged="OnSearchTextChanged"/>
-                        <TextBlock Text="Категория:" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                        <ComboBox Name="CategoryFilter" Width="150"
-                                  SelectionChanged="OnCategoryChanged"/>
-                        <Button Style="{StaticResource CustomButtonStyle}" Content="Сбросить" 
-                                Margin="15,0,5,0" Click="ResetFilters_Click" Width="80" Height="25"/>
-                        <Button Style="{StaticResource CustomButtonStyle}" Content="Обновить кэш семейств" 
-                                Click="RefreshCache_Click" Width="160" Height="25" Margin="10 0 0 0"/>
-                    </StackPanel>
-
-                    <!-- DataGrid с семействами -->
-                    <DataGrid Grid.Row="1" Grid.RowSpan="2" Name="FamiliesGrid"
-                              AutoGenerateColumns="False"
-                              IsReadOnly="True" SelectionMode="Single"
-                              SelectionUnit="FullRow" Margin="0,0,0,10">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Наименование" Binding="{Binding Name}" Width="*"/>
-                            <DataGridTextColumn Header="Версия" Binding="{Binding Version}" Width="80"/>
-                            <DataGridTextColumn Header="Категория" Binding="{Binding Category}" Width="120"/>
-                            <DataGridTextColumn Header="Дата изменения"
-                                                Binding="{Binding LastModified, StringFormat=dd.MM.yyyy HH:mm}"
-                                                Width="140"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
-
-                    <!-- Кнопки -->
-                    <StackPanel Grid.Row="3" Orientation="Horizontal"
-                                HorizontalAlignment="Right" Margin="0,10,0,0">
-                        <Button Style="{StaticResource CustomButtonStyle}" Name="CancelBtn" Content="Отмена" 
-                                Width="80" Height="25" Click="CloseButton_Click"/>
-                        <Button Style="{StaticResource CustomButtonStyle}" Name="LoadBtn" Content="Загрузить семейство"
-                                Width="150" Height="25" Margin="10,0,0,0"
-                                Click="LoadBtn_Click"/>
-                    </StackPanel>
-                    <Button Style="{StaticResource CustomButtonStyle}" Name="RequestBtn" Content="Заявка на семейство"
-                            Width="150" Height="25" Margin="0,10,670,0"
-                            Click="RequestBtn_Click" Grid.Row="3"/>
                 </Grid>
             </Border>
+
+            <WrapPanel Grid.Row="1" Margin="0,0,0,10">
+                <TextBlock Text="Поиск:"
+                           Foreground="{StaticResource MutedBrush}"
+                           VerticalAlignment="Center"
+                           Margin="0,0,5,6"/>
+                <TextBox Name="SearchBox"
+                         Width="200"
+                         Height="36"
+                         Style="{StaticResource DarkTextBoxStyle}"
+                         VerticalContentAlignment="Center"
+                         Margin="0,0,15,6"
+                         TextChanged="OnSearchTextChanged"/>
+                <TextBlock Text="Категория:"
+                           Foreground="{StaticResource MutedBrush}"
+                           VerticalAlignment="Center"
+                           Margin="0,0,5,6"/>
+                <ComboBox Name="CategoryFilter"
+                          Width="160"
+                          Style="{StaticResource DarkComboBoxStyle}"
+                          Margin="0,0,15,6"
+                          SelectionChanged="OnCategoryChanged"/>
+                <Button Style="{StaticResource SecondaryButtonStyle}"
+                        Content="Сбросить"
+                        Padding="10,6"
+                        MinHeight="36"
+                        Margin="0,0,8,6"
+                        Click="ResetFilters_Click"/>
+                <Button Style="{StaticResource SecondaryButtonStyle}"
+                        Content="Обновить кэш семейств"
+                        Padding="10,6"
+                        MinHeight="36"
+                        Margin="0,0,0,6"
+                        Click="RefreshCache_Click"/>
+            </WrapPanel>
+
+            <DataGrid Grid.Row="2"
+                      Name="FamiliesGrid"
+                      Style="{StaticResource DarkDataGridStyle}"
+                      ColumnHeaderStyle="{StaticResource DarkDataGridColumnHeaderStyle}"
+                      CellStyle="{StaticResource DarkDataGridCellStyle}"
+                      AutoGenerateColumns="False"
+                      IsReadOnly="True"
+                      SelectionMode="Single"
+                      SelectionUnit="FullRow"
+                      Margin="0,0,0,12">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Наименование"
+                                        Binding="{Binding Name}"
+                                        Width="*"
+                                        ElementStyle="{StaticResource DarkDataGridTextElementStyle}"/>
+                    <DataGridTextColumn Header="Версия"
+                                        Binding="{Binding Version}"
+                                        Width="80"
+                                        ElementStyle="{StaticResource DarkDataGridTextElementStyle}"/>
+                    <DataGridTextColumn Header="Категория"
+                                        Binding="{Binding Category}"
+                                        Width="120"
+                                        ElementStyle="{StaticResource DarkDataGridTextElementStyle}"/>
+                    <DataGridTextColumn Header="Дата изменения"
+                                        Binding="{Binding LastModified, StringFormat=dd.MM.yyyy HH:mm}"
+                                        Width="140"
+                                        ElementStyle="{StaticResource DarkDataGridTextElementStyle}"/>
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <Grid Grid.Row="3">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Button Grid.Column="0"
+                        Name="RequestBtn"
+                        Content="Заявка на семейство"
+                        Style="{StaticResource SecondaryButtonStyle}"
+                        HorizontalAlignment="Left"
+                        MinWidth="170"
+                        Click="RequestBtn_Click"/>
+                <Button Grid.Column="1"
+                        Name="CancelBtn"
+                        Content="Отмена"
+                        Style="{StaticResource CloseButtonStyle}"
+                        MinWidth="100"
+                        Click="CloseButton_Click"/>
+                <Button Grid.Column="3"
+                        Name="LoadBtn"
+                        Content="Загрузить семейство"
+                        Style="{StaticResource RunButtonStyle}"
+                        Margin="0"
+                        MinWidth="160"
+                        Click="LoadBtn_Click"/>
+            </Grid>
         </Grid>
     </Border>
 </Window>

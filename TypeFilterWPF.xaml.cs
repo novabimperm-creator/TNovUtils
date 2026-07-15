@@ -12,13 +12,14 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Markup;
 using System.Windows.Threading;
+using TNovCommon;
 
 namespace TNovUtils
 {
     /// <summary>
     /// Логика взаимодействия для TypeFilterWPF.xaml
     /// </summary>
-    public partial class TypeFilterWPF : Window, IComponentConnector, IStyleConnector
+    public partial class TypeFilterWPF : Window, IComponentConnector
     {
         public string BTNName;
         public string FilterName;
@@ -61,10 +62,10 @@ namespace TNovUtils
 
         private void CategoryCheckBox_Checked(object sender, RoutedEventArgs e)
         {
-            if (!(sender is CheckBox checkBox))
+            if (!(sender is ToggleButton toggle))
                 return;
 
-            var dataContext = checkBox.DataContext as TypeFilterCategoryViewModel;
+            var dataContext = toggle.DataContext as TypeFilterCategoryViewModel;
             if (dataContext == null)
                 return;
 
@@ -183,22 +184,15 @@ namespace TNovUtils
             }
         }
 
-        void IStyleConnector.Connect(int connectionId, object target)
+        private void TitleBar_MouseDown(object sender, MouseButtonEventArgs e)
         {
-            if (connectionId != 4)
-                return;
-            ((ToggleButton)target).Checked += new RoutedEventHandler(this.CategoryCheckBox_Checked);
-            ((ToggleButton)target).Unchecked += new RoutedEventHandler(this.CategoryCheckBox_Checked);
-        }
-
-        private void Border_MouseDown(object sender, MouseButtonEventArgs e)
-        {
-
+            if (e.ChangedButton == MouseButton.Left)
+                DragMove();
         }
 
         private void HelpButton_Click(object sender, RoutedEventArgs e)
         {
-            string commandText = @"https://portal.talan.group/knowledge/proektirovanie/tipofiltr/";
+            string commandText = HelpLinks.GetHelpLink("Типофильтр");
             var proc = new System.Diagnostics.Process();
             proc.StartInfo.FileName = commandText;
             proc.StartInfo.UseShellExecute = true;

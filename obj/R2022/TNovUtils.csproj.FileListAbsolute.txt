@@ -49,3 +49,11 @@ Z:\DEV\TNovUtils\obj\R2022\Issues\UI\UserPickerWindow.baml
 Z:\DEV\TNovUtils\obj\R2022\Issues\UI\CreateIssueWindow.g.cs
 Z:\DEV\TNovUtils\obj\R2022\Issues\UI\IssuesWindow.g.cs
 Z:\DEV\TNovUtils\obj\R2022\Issues\UI\UserPickerWindow.g.cs
+Z:\DEV\_build\TNov\runtimes\win-x64\native\WebView2Loader.dll
+Z:\DEV\_build\TNov\System.Resources.Extensions.dll
+Z:\DEV\_build\TNov\TNovUtils.dll
+Z:\DEV\_build\TNov\TNovUtils.pdb
+Z:\DEV\_build\TNovUtils\runtimes\win-x64\native\WebView2Loader.dll
+Z:\DEV\_build\TNovUtils\System.Resources.Extensions.dll
+Z:\DEV\_build\TNovUtils\TNovUtils.dll
+Z:\DEV\_build\TNovUtils\TNovUtils.pdb

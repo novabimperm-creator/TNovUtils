@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using TNovUtils.Issues.Api;
 using TNovUtils.Issues.Revit;
@@ -359,7 +360,7 @@ namespace TNovUtils.Issues.UI
                 StatusActions.Children.Add(new TextBlock
                 {
                     Text = "Статус меняют автор, ответственные и администратор",
-                    Foreground = System.Windows.Media.Brushes.Gray,
+                    Foreground = (System.Windows.Media.Brush)FindResource("Muted"),
                     FontSize = 11,
                     Margin = new Thickness(0, 0, 6, 6),
                     VerticalAlignment = VerticalAlignment.Center,
@@ -368,7 +369,15 @@ namespace TNovUtils.Issues.UI
             }
             void Add(string label, string target)
             {
-                var b = new Button { Content = label, Margin = new Thickness(0, 0, 6, 6), Padding = new Thickness(10, 4, 10, 4), Tag = target, Cursor = System.Windows.Input.Cursors.Hand };
+                var b = new Button
+                {
+                    Content = label,
+                    Margin = new Thickness(0, 0, 6, 6),
+                    Padding = new Thickness(10, 4, 10, 4),
+                    Tag = target,
+                    Cursor = Cursors.Hand,
+                    Style = (Style)FindResource("GhostButton"),
+                };
                 b.Click += Status_Click;
                 StatusActions.Children.Add(b);
             }
@@ -456,6 +465,12 @@ namespace TNovUtils.Issues.UI
             dlg.Show();
         }
 
+        private void TitleBar_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton == MouseButton.Left)
+                DragMove();
+        }
+
         // Небольшой помощник: рекурсивный обход визуального дерева.
         private static IEnumerable<T> FindChildren<T>(DependencyObject root) where T : DependencyObject
         {
@@ -467,6 +482,11 @@ namespace TNovUtils.Issues.UI
                 if (child is T t) yield return t;
                 foreach (var d in FindChildren<T>(child)) yield return d;
             }
+        }
+
+        private void Cancel_Click(object sender, RoutedEventArgs e)
+        {
+            Close();
         }
     }
 }

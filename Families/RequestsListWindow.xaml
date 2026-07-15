@@ -2,99 +2,179 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:TNovUtils"
-        Title="Список заявок" Height="550" Width="1050"
-        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
-        WindowStartupLocation="CenterOwner">
+        Title="Список заявок"
+        Height="580"
+        Width="1060"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        Loaded="Window_Loaded">
+
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/TNovCommon;component/ButtonStyles.xaml"/>
+                <ResourceDictionary Source="/TNovCommon;component/Styles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
+            <Style x:Key="GridComboStyle" TargetType="ComboBox" BasedOn="{StaticResource DarkComboBoxStyle}">
+                <Setter Property="Margin" Value="0"/>
+                <Setter Property="MinHeight" Value="28"/>
+            </Style>
         </ResourceDictionary>
     </Window.Resources>
+
     <WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="30" ResizeBorderThickness="5"
-                      GlassFrameThickness="0" CornerRadius="12"/>
+        <WindowChrome CaptionHeight="30"
+                      ResizeBorderThickness="5"
+                      GlassFrameThickness="0"
+                      CornerRadius="12"/>
     </WindowChrome.WindowChrome>
-    <Border CornerRadius="12" Background="White" BorderBrush="#FF008E43"
+
+    <Border CornerRadius="12"
+            Background="{StaticResource BgBrush}"
+            BorderBrush="{StaticResource AccentBrush}"
             BorderThickness="1">
-        <Grid>
-            <!-- Кастомный заголовок -->
-            <Border Height="30" CornerRadius="12 12 0 0" Background="#FF008E43"
-                    VerticalAlignment="Top" MouseDown="TitleBar_MouseDown">
-                <StackPanel Orientation="Horizontal">
-                    <Button Style="{StaticResource RoundButtonStyle}" Content="✕"
-                            Click="CloseButton_Click"
-                            Width="20" Height="20" Margin="5,0"
+        <Grid Margin="18">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0"
+                    MouseDown="TitleBar_MouseDown"
+                    Background="Transparent"
+                    Cursor="Arrow"
+                    Margin="0,0,0,12">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="35"/>
+                        <ColumnDefinition Width="35"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="СПИСОК ЗАЯВОК"
+                               Grid.Column="0"
+                               Foreground="{StaticResource AccentBrush}"
+                               FontSize="20"
+                               FontWeight="Bold"
+                               VerticalAlignment="Center"/>
+                    <Button Content="i"
+                            Grid.Column="1"
+                            Style="{StaticResource CloseButtonStyleMini}"
+                            Click="HelpButton_Click"
                             WindowChrome.IsHitTestVisibleInChrome="True"/>
-                    <Button Style="{StaticResource RoundButtonStyle2}" 
-Click="HelpButton_Click" Content="?"
-HorizontalAlignment="Center" VerticalAlignment="Center"
-Width="20" Height="20" Margin="0"
-WindowChrome.IsHitTestVisibleInChrome="True"/>
-                    <TextBlock Text="Список заявок" Foreground="White"
-                               VerticalAlignment="Center" Margin="10,0"/>
-                </StackPanel>
-            </Border>
-
-            <!-- Основное содержимое -->
-            <Border Margin="0,30,0,0">
-                <Grid Margin="10">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-
-                    <!-- Фильтры и поиск -->
-                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
-                        <TextBlock Text="Статус:" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                        <ComboBox Name="cmbStatusFilter" Width="150" SelectionChanged="OnFilterChanged">
-                            <ComboBoxItem Content="Все" IsSelected="True"/>
-                            <ComboBoxItem Content="Принято"/>
-                            <ComboBoxItem Content="В_работе"/>
-                            <ComboBoxItem Content="На_согласовании"/>
-                            <ComboBoxItem Content="Выполнено"/>
-                            <ComboBoxItem Content="Закрыто"/>
-                        </ComboBox>
-                        <TextBlock Text="Поиск:" VerticalAlignment="Center" Margin="15,0,5,0"/>
-                        <TextBox Name="txtSearch" Width="200" TextChanged="OnSearchTextChanged"/>
-                        <Button Style="{StaticResource CustomButtonStyle}" Content="Обновить" Margin="15,0,0,0" Click="Refresh_Click" Width="80" Height="25"/>
-                    </StackPanel>
-
-                    <!-- Таблица заявок -->
-                    <DataGrid Grid.Row="1" Name="dgRequests" AutoGenerateColumns="False"
-                              SelectionMode="Single" SelectionUnit="FullRow"
-                              RowEditEnding="dgRequests_RowEditEnding"
-                              LoadingRow="dgRequests_LoadingRow"
-                              MouseDoubleClick="dgRequests_MouseDoubleClick">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="50" IsReadOnly="True"/>
-                            <DataGridTextColumn Header="Дата" Binding="{Binding CreatedAt, StringFormat=dd.MM.yyyy HH:mm}" Width="110" IsReadOnly="True"/>
-                            <DataGridTextColumn Header="Заявитель" Binding="{Binding Requester}" Width="90" IsReadOnly="True"/>
-
-                            <DataGridComboBoxColumn x:Name="colAssignee" Header="Ответственный" Width="110"
-                                                    SelectedValueBinding="{Binding Assignee, UpdateSourceTrigger=PropertyChanged}"
-                                                    ItemsSource="{x:Static local:ResponsibleList.List}"
-                                                    DisplayMemberPath="Key"
-                                                    SelectedValuePath="Key"/>
-
-                            <DataGridTextColumn Header="Объект" Binding="{Binding ProjectDisplayName}" Width="130" IsReadOnly="True"/>
-
-                            <DataGridComboBoxColumn x:Name="colStatus" Header="Статус" Width="100"
-                                                    SelectedItemBinding="{Binding Status, UpdateSourceTrigger=PropertyChanged}"
-                                                    ItemsSource="{x:Static local:RequestsListWindow.StatusList}"/>
-
-                            <DataGridTextColumn Header="Описание" Binding="{Binding Description}" Width="180" IsReadOnly="True"/>
-                            <DataGridTextColumn Header="Срок" Binding="{Binding Deadline, StringFormat=dd.MM.yyyy HH:mm}" Width="110" IsReadOnly="True"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
-
-                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
-                        <Button Style="{StaticResource CustomButtonStyle}" Name="btnClose" Content="Закрыть" Width="80" Height="25" Click="CloseButton_Click"/>
-                    </StackPanel>
+                    <Button Content="✕"
+                            Grid.Column="2"
+                            Style="{StaticResource CloseButtonStyleMini}"
+                            Click="CloseButton_Click"
+                            WindowChrome.IsHitTestVisibleInChrome="True"/>
                 </Grid>
             </Border>
+
+            <WrapPanel Grid.Row="1" Margin="0,0,0,10">
+                <TextBlock Text="Статус:"
+                           Foreground="{StaticResource MutedBrush}"
+                           VerticalAlignment="Center"
+                           Margin="0,0,5,6"/>
+                <ComboBox Name="cmbStatusFilter"
+                          Width="160"
+                          Style="{StaticResource DarkComboBoxStyle}"
+                          Margin="0,0,15,6"
+                          SelectionChanged="OnFilterChanged">
+                    <ComboBoxItem Content="Все" IsSelected="True"/>
+                    <ComboBoxItem Content="Принято"/>
+                    <ComboBoxItem Content="В_работе"/>
+                    <ComboBoxItem Content="На_согласовании"/>
+                    <ComboBoxItem Content="Выполнено"/>
+                    <ComboBoxItem Content="Закрыто"/>
+                </ComboBox>
+                <TextBlock Text="Поиск:"
+                           Foreground="{StaticResource MutedBrush}"
+                           VerticalAlignment="Center"
+                           Margin="0,0,5,6"/>
+                <TextBox Name="txtSearch"
+                         Width="220"
+                         Height="36"
+                         Style="{StaticResource DarkTextBoxStyle}"
+                         VerticalContentAlignment="Center"
+                         Margin="0,0,15,6"
+                         TextChanged="OnSearchTextChanged"/>
+                <Button Style="{StaticResource SecondaryButtonStyle}"
+                        Content="Обновить"
+                        Padding="10,6"
+                        MinHeight="36"
+                        Margin="0,0,0,6"
+                        Click="Refresh_Click"/>
+            </WrapPanel>
+
+            <DataGrid Grid.Row="2"
+                      Name="dgRequests"
+                      Style="{StaticResource DarkDataGridStyle}"
+                      ColumnHeaderStyle="{StaticResource DarkDataGridColumnHeaderStyle}"
+                      CellStyle="{StaticResource DarkDataGridCellStyle}"
+                      AutoGenerateColumns="False"
+                      SelectionMode="Single"
+                      SelectionUnit="FullRow"
+                      RowEditEnding="dgRequests_RowEditEnding"
+                      LoadingRow="dgRequests_LoadingRow"
+                      MouseDoubleClick="dgRequests_MouseDoubleClick"
+                      Margin="0,0,0,12">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="ID"
+                                        Binding="{Binding Id}"
+                                        Width="50"
+                                        IsReadOnly="True"
+                                        ElementStyle="{StaticResource DarkDataGridTextElementStyle}"/>
+                    <DataGridTextColumn Header="Дата"
+                                        Binding="{Binding CreatedAt, StringFormat=dd.MM.yyyy HH:mm}"
+                                        Width="110"
+                                        IsReadOnly="True"
+                                        ElementStyle="{StaticResource DarkDataGridTextElementStyle}"/>
+                    <DataGridTextColumn Header="Заявитель"
+                                        Binding="{Binding Requester}"
+                                        Width="90"
+                                        IsReadOnly="True"
+                                        ElementStyle="{StaticResource DarkDataGridTextElementStyle}"/>
+                    <DataGridComboBoxColumn x:Name="colAssignee"
+                                            Header="Ответственный"
+                                            Width="110"
+                                            SelectedValueBinding="{Binding Assignee, UpdateSourceTrigger=PropertyChanged}"
+                                            ItemsSource="{x:Static local:ResponsibleList.List}"
+                                            DisplayMemberPath="Key"
+                                            SelectedValuePath="Key"
+                                            EditingElementStyle="{StaticResource GridComboStyle}"/>
+                    <DataGridTextColumn Header="Объект"
+                                        Binding="{Binding ProjectDisplayName}"
+                                        Width="130"
+                                        IsReadOnly="True"
+                                        ElementStyle="{StaticResource DarkDataGridTextElementStyle}"/>
+                    <DataGridComboBoxColumn x:Name="colStatus"
+                                            Header="Статус"
+                                            Width="110"
+                                            SelectedItemBinding="{Binding Status, UpdateSourceTrigger=PropertyChanged}"
+                                            ItemsSource="{x:Static local:RequestsListWindow.StatusList}"
+                                            EditingElementStyle="{StaticResource GridComboStyle}"/>
+                    <DataGridTextColumn Header="Описание"
+                                        Binding="{Binding Description}"
+                                        Width="180"
+                                        IsReadOnly="True"
+                                        ElementStyle="{StaticResource DarkDataGridTextElementStyle}"/>
+                    <DataGridTextColumn Header="Срок"
+                                        Binding="{Binding Deadline, StringFormat=dd.MM.yyyy HH:mm}"
+                                        Width="110"
+                                        IsReadOnly="True"
+                                        ElementStyle="{StaticResource DarkDataGridTextElementStyle}"/>
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <Button Grid.Row="3"
+                    Name="btnClose"
+                    Content="Закрыть"
+                    Style="{StaticResource CloseButtonStyle}"
+                    HorizontalAlignment="Stretch"
+                    Click="CloseButton_Click"/>
         </Grid>
     </Border>
 </Window>
