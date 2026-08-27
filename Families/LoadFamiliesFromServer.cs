@@ -87,7 +87,6 @@ namespace TNovUtils
             choiceDialog.MainContent = "Выберите нужное действие:";
             choiceDialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink1, "Открыть библиотеку семейств");
             choiceDialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink2, "Создать заявку на семейство");
-            choiceDialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink3, "Просмотр заявок");
             choiceDialog.CommonButtons = TaskDialogCommonButtons.None;
             choiceDialog.DefaultButton = TaskDialogResult.CommandLink1;
 
@@ -150,17 +149,23 @@ string libraryPath = @"\\fs-nova\NOVA\04_БИБЛИОТЕКА\BIM";
             else if (result == TaskDialogResult.CommandLink2)
             {
                 Logger.Log("Сценарий 2 - заявка на семейство", 1);
+                string commandText = @"https://tnov.pm-nova.ru/?tab=requests";
+                var proc = new System.Diagnostics.Process();
+                proc.StartInfo.FileName = commandText;
+                proc.StartInfo.UseShellExecute = true;
+                proc.Start();
+                /*
                 var requestWindow = new FamilyRequestWindow(
                 RevitContext.CurrentProjectPath,
                 RevitContext.CurrentProjectDisplayName);
-                requestWindow.ShowDialog();
-            }
+                requestWindow.ShowDialog();*/
+            }/*
             else if (result == TaskDialogResult.CommandLink3)
             {
                 Logger.Log("Сценарий 3 - журнал заявок", 1);
                 var requestsWindow = new RequestsListWindow();
                 requestsWindow.ShowDialog();
-            }
+            }*/
 
             #endregion
             Logger.Log("Завершение работы",5);

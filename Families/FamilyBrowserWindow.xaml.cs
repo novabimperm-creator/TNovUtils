@@ -260,10 +260,16 @@ namespace TNovUtils
 
         private void RequestBtn_Click(object sender, RoutedEventArgs e)
         {
+            string commandText = @"https://tnov.pm-nova.ru/?tab=requests";
+            var proc = new System.Diagnostics.Process();
+            proc.StartInfo.FileName = commandText;
+            proc.StartInfo.UseShellExecute = true;
+            proc.Start();
+            /*
             var requestWindow = new FamilyRequestWindow(
                 RevitContext.CurrentProjectPath,
                 RevitContext.CurrentProjectDisplayName);
-            requestWindow.ShowDialog();
+            requestWindow.ShowDialog();*/
         }
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
