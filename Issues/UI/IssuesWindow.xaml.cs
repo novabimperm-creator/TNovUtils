@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media.Imaging;
 using TNovUtils.Issues.Api;
 using TNovUtils.Issues.Revit;
@@ -46,6 +48,20 @@ namespace TNovUtils.Issues.UI
             _modelName = modelName;
             SubTitle.Text = string.IsNullOrEmpty(modelName) ? "BIM-замечания и коллизии" : $"Модель: {modelName}";
             IssuesList.ItemsSource = _items;
+        }
+
+        // WindowStyle=None снимает WS_MINIMIZEBOX; у owned-окна без WS_EX_APPWINDOW
+        // нет кнопки на панели задач — тогда сворачивание превращается в «пропало».
+        private void Window_SourceInitialized(object sender, EventArgs e)
+        {
+            var hwnd = new WindowInteropHelper(this).Handle;
+            long ex = GetWindowLongPtr(hwnd, GWL_EXSTYLE).ToInt64();
+            ex = (ex | WS_EX_APPWINDOW) & ~(long)WS_EX_TOOLWINDOW;
+            SetWindowLongPtr(hwnd, GWL_EXSTYLE, new IntPtr(ex));
+
+            long style = GetWindowLongPtr(hwnd, GWL_STYLE).ToInt64();
+            style |= WS_MINIMIZEBOX;
+            SetWindowLongPtr(hwnd, GWL_STYLE, new IntPtr(style));
         }
 
         public void SetModel(string modelName)
@@ -484,9 +500,26 @@ namespace TNovUtils.Issues.UI
             }
         }
 
+        private void Minimize_Click(object sender, RoutedEventArgs e)
+        {
+            WindowState = WindowState.Minimized;
+        }
+
         private void Cancel_Click(object sender, RoutedEventArgs e)
         {
             Close();
         }
+
+        private const int GWL_STYLE = -16;
+        private const int GWL_EXSTYLE = -20;
+        private const int WS_MINIMIZEBOX = 0x00020000;
+        private const int WS_EX_APPWINDOW = 0x00040000;
+        private const int WS_EX_TOOLWINDOW = 0x00000080;
+
+        [DllImport("user32.dll", EntryPoint = "GetWindowLongPtr")]
+        private static extern IntPtr GetWindowLongPtr(IntPtr hWnd, int nIndex);
+
+        [DllImport("user32.dll", EntryPoint = "SetWindowLongPtr")]
+        private static extern IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
     }
 }

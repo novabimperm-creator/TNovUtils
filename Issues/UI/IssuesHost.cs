@@ -1,3 +1,4 @@
+using System.Windows;
 using System.Windows.Interop;
 using Autodesk.Revit.UI;
 using TNovUtils.Issues.Api;
@@ -25,6 +26,8 @@ namespace TNovUtils.Issues.UI
             if (_window != null)
             {
                 _window.SetModel(modelName); // модель могли переключить — обновим
+                if (_window.WindowState == WindowState.Minimized)
+                    _window.WindowState = WindowState.Normal;
                 _window.Activate();
                 return;
             }

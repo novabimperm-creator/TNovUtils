@@ -7,11 +7,12 @@
         MinWidth="900"
         MinHeight="520"
         WindowStartupLocation="CenterOwner"
-        ShowInTaskbar="False"
+        ShowInTaskbar="True"
         AllowsTransparency="True"
         Background="Transparent"
         WindowStyle="None"
         ResizeMode="CanResizeWithGrip"
+        SourceInitialized="Window_SourceInitialized"
         Loaded="Window_Loaded">
 
     <Window.Resources>
@@ -224,11 +225,16 @@
                             Style="{StaticResource PrimaryButton}"
                             Click="Create_Click"
                             Content="+  Добавить"/>
-                    <Button Content="✕" Margin="10,0,10,0"
-        Grid.Column="1"
-        Style="{StaticResource CloseButtonStyleMini}"
-        Click="Cancel_Click"
-        WindowChrome.IsHitTestVisibleInChrome="True"/>
+                    <Button Content="–" Margin="10,0,0,0"
+                            Style="{StaticResource CloseButtonStyleMini}"
+                            Click="Minimize_Click"
+                            ToolTip="Свернуть"
+                            WindowChrome.IsHitTestVisibleInChrome="True"/>
+                    <Button Content="✕" Margin="4,0,10,0"
+                            Style="{StaticResource CloseButtonStyleMini}"
+                            Click="Cancel_Click"
+                            ToolTip="Закрыть"
+                            WindowChrome.IsHitTestVisibleInChrome="True"/>
                 </StackPanel>
             </Grid>
 
