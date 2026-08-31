@@ -1,0 +1,131 @@
+<Window x:Class="TNovUtils.Checklist.UI.ChecklistWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        mc:Ignorable="d"
+        Title="Чек-лист"
+        MinHeight="552" Height="640"
+        MinWidth="1081" Width="1081"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="True"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="CanResize"
+        WindowStyle="None"
+        SourceInitialized="Window_SourceInitialized">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/TNovCommon;component/Styles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            <Style x:Key="ChecklistNavButtonStyle" TargetType="Button" BasedOn="{StaticResource JournalNavButtonStyle}">
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                        <Setter Property="Background" Value="{StaticResource SelectedBrush}"/>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="30"
+                      ResizeBorderThickness="5"
+                      GlassFrameThickness="0"
+                      CornerRadius="12"/>
+    </WindowChrome.WindowChrome>
+
+    <Border CornerRadius="12"
+            Background="{StaticResource BgBrush}"
+            BorderBrush="{StaticResource AccentBrush}"
+            BorderThickness="1">
+        <Grid Margin="12">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0"
+                    MouseDown="TitleBar_MouseDown"
+                    Background="Transparent"
+                    Cursor="Arrow"
+                    Margin="6,6,6,10">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="35"/>
+                        <ColumnDefinition Width="35"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="ЧЕК-ЛИСТ"
+                                   Foreground="{StaticResource AccentBrush}"
+                                   FontSize="22"
+                                   FontWeight="Bold"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock x:Name="SubTitle"
+                                   Margin="14,4,0,0"
+                                   FontSize="12"
+                                   Foreground="{StaticResource MutedBrush}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <Button Content="–"
+                            Grid.Column="1"
+                            HorizontalAlignment="Right"
+                            Style="{StaticResource CloseButtonStyleMini}"
+                            Click="Minimize_Click"
+                            ToolTip="Свернуть"
+                            WindowChrome.IsHitTestVisibleInChrome="True"/>
+                    <Button Content="✕"
+                            Grid.Column="2"
+                            HorizontalAlignment="Right"
+                            Style="{StaticResource CloseButtonStyleMini}"
+                            Click="CloseButton_Click"
+                            ToolTip="Закрыть"
+                            WindowChrome.IsHitTestVisibleInChrome="True"/>
+                </Grid>
+            </Border>
+
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="220"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0"
+                        Style="{StaticResource PanelFrameStyle}"
+                        Margin="0,0,8,0"
+                        Padding="8">
+                    <ItemsControl ItemsSource="{Binding NavItems}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Style="{StaticResource ChecklistNavButtonStyle}"
+                                        Command="{Binding DataContext.SelectNavCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                        CommandParameter="{Binding Id}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Ellipse Width="8" Height="8"
+                                                 Fill="{Binding StatusBrush}"
+                                                 Margin="0,0,8,0"
+                                                 VerticalAlignment="Center"
+                                                 Visibility="{Binding StatusVisibility}"/>
+                                        <TextBlock Text="{Binding Title}"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Border>
+
+                <Border Grid.Column="1"
+                        Style="{StaticResource PanelFrameStyle}"
+                        Padding="0">
+                    <ContentControl Content="{Binding CurrentContent}"
+                                    HorizontalAlignment="Stretch"
+                                    VerticalAlignment="Stretch"/>
+                </Border>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>
