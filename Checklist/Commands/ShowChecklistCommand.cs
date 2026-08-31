@@ -43,9 +43,17 @@ namespace TNovUtils.Checklist.Commands
             }
             catch (Exception ex)
             {
-                message = ex.Message;
+                message = Flatten(ex);
                 return Result.Failed;
             }
+        }
+
+        private static string Flatten(Exception ex)
+        {
+            var text = ex.Message;
+            for (var inner = ex.InnerException; inner != null; inner = inner.InnerException)
+                text += " → " + inner.Message;
+            return text;
         }
     }
 }

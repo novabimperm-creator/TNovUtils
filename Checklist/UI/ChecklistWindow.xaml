@@ -5,7 +5,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         mc:Ignorable="d"
         Title="Чек-лист"
-        MinHeight="552" Height="640"
+        MinHeight="640" Height="800"
         MinWidth="1081" Width="1081"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="True"
