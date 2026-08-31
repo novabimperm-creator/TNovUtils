@@ -31,9 +31,15 @@ namespace TNovUtils.Checklist.UI
             IsSummary = isSummary;
         }
 
+        public void ApplyStatus(CheckStatus status)
+        {
+            StatusBrush = CheckStatusBrushes.Of(status);
+        }
+
         public void ApplyStatus(ICheck check)
         {
-            StatusBrush = check == null ? null : CheckStatusBrushes.Of(check.Status);
+            if (check == null) return;
+            ApplyStatus(check.Status);
         }
     }
 
@@ -52,11 +58,17 @@ namespace TNovUtils.Checklist.UI
             private set => SetProperty(ref _currentContent, value);
         }
 
-        public ChecklistWindowViewModel(CheckRegistry registry, Func<string, UserControl> createView)
+        public ChecklistWindowViewModel(CheckRegistry registry, BimCheckStore bimStore, Func<string, UserControl> createView)
         {
             _createView = createView;
 
             NavItems.Add(new NavItem(CheckRegistry.SummaryId, CheckRegistry.SummaryTitle, isSummary: true));
+
+            var bimNav = new NavItem(CheckRegistry.BimChecksId, CheckRegistry.BimChecksTitle, isSummary: false);
+            bimNav.ApplyStatus(bimStore.AggregateStatus);
+            NavItems.Add(bimNav);
+            bimStore.Changed += (s, e) => bimNav.ApplyStatus(bimStore.AggregateStatus);
+
             foreach (var check in registry.Checks)
             {
                 var nav = new NavItem(check.Id, check.Title, isSummary: false);

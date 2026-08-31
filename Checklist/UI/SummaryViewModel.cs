@@ -47,16 +47,35 @@ namespace TNovUtils.Checklist.UI
     {
         private readonly CheckRegistry _registry;
         private readonly AutoCheckStore _store;
+        private readonly BimCheckStore _bimStore;
         private readonly System.Windows.Threading.Dispatcher _dispatcher;
         private bool _isRunning;
 
         public ObservableCollection<SummaryRow> Rows { get; } = new ObservableCollection<SummaryRow>();
         public RelayCommand2 RunAllCommand { get; }
+        public RelayCommand2 OpenBimCommand { get; }
 
-        public SummaryViewModel(CheckRegistry registry, AutoCheckStore store, Action<string> navigate)
+        public string BimTitle => CheckRegistry.BimChecksTitle;
+
+        private string _bimCountText;
+        public string BimCountText
+        {
+            get => _bimCountText;
+            private set => SetProperty(ref _bimCountText, value);
+        }
+
+        private Brush _bimStatusBrush;
+        public Brush BimStatusBrush
+        {
+            get => _bimStatusBrush;
+            private set => SetProperty(ref _bimStatusBrush, value);
+        }
+
+        public SummaryViewModel(CheckRegistry registry, AutoCheckStore store, BimCheckStore bimStore, Action<string> navigate)
         {
             _registry = registry;
             _store = store;
+            _bimStore = bimStore;
             _dispatcher = System.Windows.Threading.Dispatcher.CurrentDispatcher;
 
             foreach (var check in registry.Checks)
@@ -66,7 +85,17 @@ namespace TNovUtils.Checklist.UI
                 check.PropertyChanged += (s, e) => row.Update(check);
             }
 
+            OpenBimCommand = new RelayCommand2(_ => navigate(CheckRegistry.BimChecksId));
+            RefreshBim();
+            _bimStore.Changed += (s, e) => RefreshBim();
+
             RunAllCommand = new RelayCommand2(_ => RunAll(), _ => !_isRunning);
+        }
+
+        private void RefreshBim()
+        {
+            BimCountText = _bimStore.CountText;
+            BimStatusBrush = CheckStatusBrushes.Of(_bimStore.AggregateStatus);
         }
 
         private void RunAll()

@@ -49,6 +49,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*" MinHeight="80"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*" MinHeight="80"/>
         </Grid.RowDefinitions>
 
@@ -117,8 +118,40 @@
             </ItemsControl>
         </ScrollViewer>
 
+        <Border Grid.Row="3"
+                Style="{StaticResource ChangeCardStyle}"
+                Padding="10,8"
+                Margin="0,0,0,8"
+                Cursor="Hand">
+            <Border.InputBindings>
+                <MouseBinding MouseAction="LeftClick"
+                              Command="{Binding OpenBimCommand}"/>
+            </Border.InputBindings>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Ellipse Width="8" Height="8"
+                         Fill="{Binding BimStatusBrush}"
+                         Margin="0,0,8,0"
+                         VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="1"
+                           Text="{Binding BimTitle}"
+                           Style="{StaticResource JournalModuleStyle}"
+                           VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="2"
+                           Text="{Binding BimCountText}"
+                           Foreground="{Binding BimStatusBrush}"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"
+                           Margin="8,0,0,0"/>
+            </Grid>
+        </Border>
+
         <ContentControl x:Name="DesignerHost"
-                      Grid.Row="3"
+                      Grid.Row="4"
                       HorizontalAlignment="Stretch"
                       VerticalAlignment="Stretch"/>
     </Grid>

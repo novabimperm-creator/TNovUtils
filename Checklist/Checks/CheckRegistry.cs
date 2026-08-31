@@ -11,6 +11,8 @@ namespace TNovUtils.Checklist.Checks
     {
         public const string SummaryId = "summary";
         public const string SummaryTitle = "Свод";
+        public const string BimChecksId = "bim-checks";
+        public const string BimChecksTitle = "BIM-проверки";
 
         public IReadOnlyList<ICheck> Checks { get; }
 

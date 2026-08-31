@@ -12,6 +12,7 @@ namespace TNovUtils.Checklist.UI
     public partial class ChecklistWindow : Window
     {
         private readonly AutoCheckStore _store;
+        private readonly BimCheckStore _bimStore;
         private readonly ChecklistWindowViewModel _vm;
 
         public ChecklistWindow(UIDocument uidoc)
@@ -22,12 +23,14 @@ namespace TNovUtils.Checklist.UI
             SubTitle.Text = doc.Title;
 
             _store = new AutoCheckStore(doc);
+            _bimStore = new BimCheckStore(doc);
             var registry = new CheckRegistry(_store, doc);
-            _vm = new ChecklistWindowViewModel(registry, id => CreateView(id, registry, doc));
+            _vm = new ChecklistWindowViewModel(registry, _bimStore, id => CreateView(id, registry, doc));
             DataContext = _vm;
             Closed += (s, e) =>
             {
                 _store.Dispose();
+                _bimStore.Dispose();
                 _vm.DisposeViews();
             };
 
@@ -37,7 +40,10 @@ namespace TNovUtils.Checklist.UI
         private System.Windows.Controls.UserControl CreateView(string id, CheckRegistry registry, Document doc)
         {
             if (id == CheckRegistry.SummaryId)
-                return new SummaryControl(registry, _store, _vm.Select, doc);
+                return new SummaryControl(registry, _store, _bimStore, _vm.Select, doc);
+
+            if (id == CheckRegistry.BimChecksId)
+                return new BimChecksControl(_bimStore);
 
             var check = registry.Find(id);
             return check != null

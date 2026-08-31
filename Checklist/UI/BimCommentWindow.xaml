@@ -1,0 +1,100 @@
+<Window x:Class="TNovUtils.Checklist.UI.BimCommentWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Комментарии"
+        Width="520"
+        Height="360"
+        WindowStartupLocation="CenterOwner"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="CanResize"
+        MinWidth="400"
+        MinHeight="280"
+        WindowStyle="None">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/TNovCommon;component/Styles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="30"
+                      ResizeBorderThickness="5"
+                      GlassFrameThickness="0"
+                      CornerRadius="12"/>
+    </WindowChrome.WindowChrome>
+
+    <Border CornerRadius="12"
+            Background="{StaticResource BgBrush}"
+            BorderBrush="{StaticResource AccentBrush}"
+            BorderThickness="1">
+        <Grid Margin="12">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0"
+                    MouseDown="TitleBar_MouseDown"
+                    Background="Transparent"
+                    Cursor="Arrow"
+                    Margin="6,6,6,10">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="35"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="КОММЕНТАРИИ"
+                               Foreground="{StaticResource AccentBrush}"
+                               FontSize="16"
+                               FontWeight="Bold"
+                               VerticalAlignment="Center"/>
+                    <Button Content="✕"
+                            Grid.Column="1"
+                            HorizontalAlignment="Right"
+                            Style="{StaticResource CloseButtonStyleMini}"
+                            Click="Cancel_Click"
+                            WindowChrome.IsHitTestVisibleInChrome="True"/>
+                </Grid>
+            </Border>
+
+            <TextBlock x:Name="CheckTitle"
+                       Grid.Row="1"
+                       Style="{StaticResource PanelHeaderStyle}"
+                       FontSize="13"
+                       TextWrapping="Wrap"
+                       Margin="0,0,0,8"/>
+
+            <TextBox x:Name="CommentBox"
+                     Grid.Row="2"
+                     Style="{StaticResource DarkTextBoxStyle}"
+                     AcceptsReturn="True"
+                     TextWrapping="Wrap"
+                     VerticalScrollBarVisibility="Auto"
+                     VerticalContentAlignment="Top"
+                     Padding="8"
+                     MinHeight="140"/>
+
+            <Grid Grid.Row="3" Margin="0,10,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Button Content="Отмена"
+                        Style="{StaticResource SecondaryButtonStyle}"
+                        Click="Cancel_Click"/>
+                <Button Grid.Column="2"
+                        Content="Сохранить"
+                        Style="{StaticResource RunButtonStyle}"
+                        Margin="0"
+                        Click="Save_Click"/>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>
