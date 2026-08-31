@@ -390,7 +390,9 @@
                                     <GridViewColumn Header="№" Width="50" DisplayMemberBinding="{Binding Number}"/>
                                     <GridViewColumn Header="Содержание" Width="360" DisplayMemberBinding="{Binding Description}"/>
                                     <GridViewColumn Header="Статус" Width="110" DisplayMemberBinding="{Binding StatusRu}"/>
-                                    <GridViewColumn Header="Автор" Width="120" DisplayMemberBinding="{Binding Author}"/>
+                                    <!-- ФИО, а не id: см. Issues/Api/PeopleDirectory.cs -->
+                                    <GridViewColumn Header="Автор" Width="140" DisplayMemberBinding="{Binding AuthorName}"/>
+                                    <GridViewColumn Header="Ответственные" Width="150" DisplayMemberBinding="{Binding AssigneesText}"/>
                                     <GridViewColumn Header="Фото" Width="50" DisplayMemberBinding="{Binding PhotoCount}"/>
                                 </GridView>
                             </ListView.View>

@@ -24,7 +24,6 @@ namespace TNovUtils.Issues.UI
         private readonly ObservableCollection<Issue> _items = new ObservableCollection<Issue>();
         private readonly Dictionary<string, string> _modelNames = new Dictionary<string, string>();
         private List<DirectoryUser> _users;                                   // каталог сотрудников (пикер ответственных)
-        private Dictionary<string, string> _userNames = new Dictionary<string, string>(); // id → ФИО
         private Issue _selected;
         private bool _authed;
         private bool _ready; // фильтры не дёргаем до окончания инициализации
@@ -90,7 +89,9 @@ namespace TNovUtils.Issues.UI
                 }
                 await PopulateFiltersAsync();
                 // Каталог сотрудников — для показа ФИО и пикера переназначения ответственных.
-                try { _users = await Api.GetUsersAsync(); _userNames = _users.ToDictionary(u => u.Id, u => u.DisplayName); }
+                // Заполняем ДО RefreshListAsync: список рисуется байндингом на DTO и берёт
+                // ФИО из PeopleDirectory — пустой справочник дал бы в «Авторе» голый id.
+                try { _users = await Api.GetUsersAsync(); PeopleDirectory.Set(_users); }
                 catch { _users = null; }
             }
             catch (Exception ex) { StatusBar.Text = "Не удалось подготовить модель: " + ex.Message; }
@@ -252,9 +253,8 @@ namespace TNovUtils.Issues.UI
             combo.SelectedIndex = sel;
         }
 
-        /// <summary>ФИО по id из каталога; если каталог не загрузился/юзера нет — сам id.</summary>
-        private string PersonName(string id) =>
-            (!string.IsNullOrEmpty(id) && _userNames.TryGetValue(id, out var n) && !string.IsNullOrEmpty(n)) ? n : id;
+        /// <summary>ФИО по id — тот же источник, что у колонок списка (Api/PeopleDirectory.cs).</summary>
+        private static string PersonName(string id) => PeopleDirectory.NameOf(id);
 
         // Клиентские фильтры (поиск/автор/ответственный) поверх загруженного списка.
         private void ApplyClientFilters()

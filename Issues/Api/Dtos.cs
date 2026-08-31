@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json;
 
 namespace TNovUtils.Issues.Api
@@ -45,6 +46,14 @@ namespace TNovUtils.Issues.Api
         public List<PhotoMeta> Photos { get; set; } = new List<PhotoMeta>();
 
         [JsonIgnore] public string StatusRu => StatusLabels.Ru(Status);
+
+        // ФИО для колонок списка: строка байндится на DTO и до каталога
+        // сотрудников не дотягивается сама — берём его из PeopleDirectory.
+        [JsonIgnore] public string AuthorName => PeopleDirectory.NameOf(Author);
+        [JsonIgnore]
+        public string AssigneesText => (Assignees == null || Assignees.Count == 0)
+            ? "—"
+            : string.Join(", ", Assignees.Select(PeopleDirectory.NameOf));
     }
 
     public static class StatusLabels
