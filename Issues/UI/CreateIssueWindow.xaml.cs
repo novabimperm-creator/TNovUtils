@@ -95,13 +95,47 @@ namespace TNovUtils.Issues.UI
                 ElementText.Text = _elementId.ToString();
                 if (ids.Count > 1) ErrorText.Text = "Выбрано несколько — взят первый элемент.";
                 else ErrorText.Text = "";
+                ShowWarning(null);
+                _ = CheckDuplicatesAsync(); // спросим сервер: нет ли уже вопроса на этот элемент
             }));
         }
+
+        /// <summary>
+        /// Есть ли уже вопрос на этот же элемент этой же модели. Не запрещает — по одному
+        /// элементу бывают разные замечания, — но называет номер: две неразличимые карточки
+        /// на один id, отличавшиеся только фото, и породили жалобу «ничего не найти»
+        /// (2026-09-02, Navisworks-ветка того же модуля). Подсказка не критична: ошибка
+        /// запроса просто гасит её.
+        /// </summary>
+        private async Task CheckDuplicatesAsync()
+        {
+            if (_elementId == null || string.IsNullOrEmpty(_modelName)) return;
+            long elementId = _elementId.Value;
+            try
+            {
+                var issues = await Api.GetIssuesByModelAsync(_modelName);
+                var hit = issues.FirstOrDefault(i => i.Models != null &&
+                    i.Models.Any(m => m.ElementId == elementId && m.ModelId == _currentModelId));
+                if (hit == null) return;
+                ShowWarning($"На элемент {elementId} уже есть вопрос №{hit.Number} ({hit.StatusRu}): {Short(hit.Description)}");
+            }
+            catch (Exception ex) { PluginLog.Write("Проверка дублей по элементу: " + ex.Message); }
+        }
+
+        private void ShowWarning(string text)
+        {
+            WarnText.Text = text ?? "";
+            WarnText.Visibility = string.IsNullOrEmpty(text) ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        private static string Short(string s) =>
+            string.IsNullOrEmpty(s) ? "" : (s.Length > 50 ? s.Substring(0, 50) + "…" : s);
 
         private void ClearElement_Click(object sender, RoutedEventArgs e)
         {
             _elementId = null;
             ElementText.Text = "не выбран";
+            ShowWarning(null);
         }
 
         private void AddPhotos_Click(object sender, RoutedEventArgs e)

@@ -272,6 +272,24 @@ namespace TNovUtils.Issues.UI
             foreach (var i in q2) _items.Add(i);
             EmptyState.Visibility = _items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
             StatusBar.Text = $"Вопросов: {_items.Count}" + (_items.Count != _all.Count ? $" из {_all.Count}" : "");
+            DropDetailIfOutOfList();
+        }
+
+        /// <summary>
+        /// Карточка справа не должна пережить смену фильтра. Очистка списка сбрасывает
+        /// IssuesList.SelectedItem в null, а обработчик выбора на null ничего не делает —
+        /// и деталь залипала: слева вопросы одной модели, справа карточка вопроса другой
+        /// из прошлого выбора. Ровно так родилась жалоба «вопрос про С2, а внутри С1»
+        /// (2026-09-02, Navisworks-ветка этого же модуля) — в базе всё было верно.
+        /// </summary>
+        private void DropDetailIfOutOfList()
+        {
+            if (_selected == null) return;
+            if (_items.Any(i => i.Id == _selected.Id)) return;
+            _selected = null;
+            ModelsList.ItemsSource = null;
+            PhotosPanel.Children.Clear();
+            ShowDetail(false);
         }
 
         private static string NullIfEmpty(string s) => string.IsNullOrEmpty(s) ? null : s;
@@ -322,7 +340,12 @@ namespace TNovUtils.Issues.UI
 
                 var slots = (_selected.Models ?? new List<IssueModelRef>()).Select((m, idx) =>
                 {
-                    string name = (m.ModelId != null && _modelNames.TryGetValue(m.ModelId, out var n)) ? n : m.ModelId;
+                    // Имя модели — из ответа СЕРВЕРА (models[].name). Локальный кэш _modelNames
+                    // снимается один раз при открытии окна и не знает моделей, заведённых позже:
+                    // он и показывал в карточке чужое имя при верных данных в базе.
+                    string name = !string.IsNullOrEmpty(m.Name)
+                        ? m.Name
+                        : ((m.ModelId != null && _modelNames.TryGetValue(m.ModelId, out var n)) ? n : m.ModelId);
                     string el = m.ElementId?.ToString() ?? "—";
                     return new ModelSlotVM { ElementId = m.ElementId, SlotLabel = $"Модель {idx + 1}: {name} · элемент {el}" };
                 }).ToList();

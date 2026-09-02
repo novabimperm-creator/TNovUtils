@@ -12,6 +12,15 @@ namespace TNovUtils.Issues.Api
     {
         [JsonProperty("modelId")] public string ModelId { get; set; }
         [JsonProperty("elementId")] public long? ElementId { get; set; }
+
+        /// <summary>
+        /// Имя модели. Его резолвит СЕРВЕР (issues.js, rowToPublic → models[].name) —
+        /// клиентский кэш «id → имя», снятый один раз при открытии окна, не знает
+        /// моделей, заведённых позже, и подставляет чужое имя при верных данных в базе.
+        /// В запросах не шлём: сервер принимает только modelId/elementId.
+        /// </summary>
+        [JsonProperty("name", NullValueHandling = NullValueHandling.Ignore)]
+        public string Name { get; set; }
     }
 
     public sealed class PhotoMeta

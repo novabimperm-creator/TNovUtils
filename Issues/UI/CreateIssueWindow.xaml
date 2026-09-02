@@ -137,6 +137,13 @@
                             MinHeight="32"
                             Click="ClearElement_Click"/>
                 </StackPanel>
+                <!-- «На этот элемент уже есть вопрос №N» — чтобы не плодить неразличимые
+                     карточки на один и тот же элемент (жалоба 2026-09-02). -->
+                <TextBlock x:Name="WarnText"
+                           Foreground="#FFC46B"
+                           TextWrapping="Wrap"
+                           Margin="0,0,0,12"
+                           Visibility="Collapsed"/>
 
                 <TextBlock Text="Фото"
                            Style="{StaticResource PanelHeaderStyle}"/>
