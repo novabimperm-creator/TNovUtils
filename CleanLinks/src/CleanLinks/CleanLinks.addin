@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RevitAddIns>
+  <AddIn Type="Application">
+    <Name>Чистые связи</Name>
+    <Assembly>CleanLinks\CleanLinks.dll</Assembly>
+    <AddInId>3bc77d05-e4d7-4c1c-8794-8a31db87e996</AddInId>
+    <FullClassName>CleanLinks.App</FullClassName>
+    <VendorId>CLNK</VendorId>
+    <VendorDescription>Чистые связи — инструменты для RVT-связей</VendorDescription>
+  </AddIn>
+</RevitAddIns>
