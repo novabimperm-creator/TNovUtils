@@ -38,6 +38,12 @@
     <Folder Include="Checklist\" />
   </ItemGroup>
 
+  <!-- CleanLinks: команды и ядро в TNovUtils; App.cs остаётся точкой входа автономного аддина. -->
+  <ItemGroup>
+    <Compile Remove="CleanLinks\src\CleanLinks\App.cs" />
+    <None Include="CleanLinks\**\*" Exclude="CleanLinks\**\bin\**;CleanLinks\**\obj\**;CleanLinks\src\CleanLinks\**\*.cs" />
+  </ItemGroup>
+
   <!-- ===== Версионирование ===== -->
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
     <Exec Command="powershell -ExecutionPolicy Bypass -File &quot;$(ProjectDir)UpdateVersion.ps1&quot;" />
