@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RevitAddIns>
+  <AddIn Type="Application">
+    <Name>Перенос элементов</Name>
+    <Assembly>LevelMover\LevelMover.dll</Assembly>
+    <AddInId>b3d9c27e-eaca-43df-8373-3f8dce2f867a</AddInId>
+    <FullClassName>LevelMover.App</FullClassName>
+    <VendorId>LVMV</VendorId>
+    <VendorDescription>Перенос элементов — смена уровня без потери расположения</VendorDescription>
+  </AddIn>
+</RevitAddIns>

@@ -1,0 +1,56 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <!-- Исходники в UTF-8 без BOM: без CodePage компилятор прочитает кириллицу как ANSI -->
+    <CodePage>65001</CodePage>
+    <PlatformTarget>x64</PlatformTarget>
+    <AssemblyName>LevelMover</AssemblyName>
+    <RootNamespace>LevelMover</RootNamespace>
+    <Configuration Condition="'$(Configuration)' == ''">Release</Configuration>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <Product>Перенос элементов</Product>
+    <AssemblyTitle>Перенос элементов — смена уровня без потери расположения</AssemblyTitle>
+    <Version>1.0.0</Version>
+    <!-- Revit грузит плагин сам; отладочные символы в portable-формате читаются нормально -->
+    <DebugType>portable</DebugType>
+    <EnableDefaultNoneItems>false</EnableDefaultNoneItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Даёт эталонные сборки net48 без установки VS targeting pack -->
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="1.0.3">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <PropertyGroup>
+    <RevitDir Condition="'$(RevitDir)' == ''">C:\Program Files\Autodesk\Revit 2022\</RevitDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Private=false: сборки Revit не копируем рядом с плагином, их даёт сам Revit -->
+    <Reference Include="RevitAPI">
+      <HintPath>$(RevitDir)RevitAPI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="RevitAPIUI">
+      <HintPath>$(RevitDir)RevitAPIUI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
+    <!-- Иконки кнопок ленты Revit — это WPF ImageSource -->
+    <Reference Include="PresentationCore" />
+    <Reference Include="WindowsBase" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\*.png" />
+    <None Include="LevelMover.addin" />
+  </ItemGroup>
+
+</Project>

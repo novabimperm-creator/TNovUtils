@@ -44,6 +44,13 @@
     <None Include="CleanLinks\**\*" Exclude="CleanLinks\**\bin\**;CleanLinks\**\obj\**;CleanLinks\src\CleanLinks\**\*.cs" />
   </ItemGroup>
 
+  <!-- LevelMover: то же самое — команда и ядро компилируются в TNovUtils, App.cs остаётся
+       точкой входа автономного аддина. -->
+  <ItemGroup>
+    <Compile Remove="LevelMover\src\LevelMover\App.cs" />
+    <None Include="LevelMover\**\*" Exclude="LevelMover\**\bin\**;LevelMover\**\obj\**;LevelMover\src\LevelMover\**\*.cs" />
+  </ItemGroup>
+
   <!-- ===== Версионирование ===== -->
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
     <Exec Command="powershell -ExecutionPolicy Bypass -File &quot;$(ProjectDir)UpdateVersion.ps1&quot;" />
