@@ -5,6 +5,7 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using CleanLinks.Core;
 using CleanLinks.UI;
+using TNovCommon;
 
 namespace CleanLinks.Commands
 {
@@ -17,11 +18,12 @@ namespace CleanLinks.Commands
     {
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
-            UIDocument uiDoc = commandData.Application.ActiveUIDocument;
+            UIApplication uiapp = commandData.Application;
+            UIDocument uiDoc = uiapp.ActiveUIDocument;
             if (uiDoc == null)
             {
-                message = "Нет открытого проекта.";
-                return Result.Failed;
+                RevitWindow.ShowDialog(new InfoWindow280("Нет открытой модели."), uiapp);
+                return Result.Cancelled;
             }
 
             Document doc = uiDoc.Document;
@@ -29,11 +31,11 @@ namespace CleanLinks.Commands
 
             if (links.Count == 0)
             {
-                TaskDialog.Show("Чистые связи", "В проекте нет RVT-связей.");
+                RevitWindow.ShowDialog(new InfoWindow280("В проекте нет RVT-связей."), uiapp);
                 return Result.Cancelled;
             }
 
-            List<WorksetCategory> categories = ChooseCategories(links);
+            List<WorksetCategory> categories = ChooseCategories(uiapp, links);
             if (categories == null || categories.Count == 0) return Result.Cancelled;
 
             List<LinkPlan> plans = BuildPlans(links, categories);
@@ -49,21 +51,24 @@ namespace CleanLinks.Commands
             try
             {
                 ApplyResult result;
-                string title = "Выключаю: " + string.Join(", ", categories.Select(c => c.Name.ToLowerInvariant()));
-
-                using (var progress = new ProgressForm(title))
+                var progress = new LinkProgressWindow();
+                RevitWindow.Show(progress, uiapp);
+                try
                 {
-                    progress.ShowOver(commandData.Application.MainWindowHandle);
-                    // Транзакцию открывает сам LinkManager: перезагрузка связи внутри неё запрещена.
                     result = LinkManager.Apply(doc, uiDoc.ActiveView, plans, progress);
                     progress.Finish();
                 }
+                finally
+                {
+                    progress.Close();
+                }
 
-                ShowReport(result, plans.Count, categories, unreachable, withoutMatch);
+                ShowReport(uiapp, result, plans.Count, categories, unreachable, withoutMatch);
                 return Result.Succeeded;
             }
             catch (Exception ex)
             {
+                RevitWindow.ShowDialog(new InfoWindow280("Не удалось выключить наборы: " + ex.Message), uiapp);
                 message = ex.Message;
                 return Result.Failed;
             }
@@ -73,7 +78,7 @@ namespace CleanLinks.Commands
         /// Какие группы наборов гасить. null или пустой список — пользователь отказался,
         /// команда молча завершается.
         /// </summary>
-        protected abstract List<WorksetCategory> ChooseCategories(List<LinkInfo> links);
+        protected abstract List<WorksetCategory> ChooseCategories(UIApplication uiapp, List<LinkInfo> links);
 
         /// <summary>Для каждой пригодной связи — закрыть её наборы выбранных групп, что ещё открыты.</summary>
         protected static List<LinkPlan> BuildPlans(List<LinkInfo> links, List<WorksetCategory> categories)
@@ -95,7 +100,7 @@ namespace CleanLinks.Commands
             return plans;
         }
 
-        private static void ShowReport(ApplyResult result, int planned, List<WorksetCategory> categories,
+        private static void ShowReport(UIApplication uiapp, ApplyResult result, int planned, List<WorksetCategory> categories,
             List<LinkInfo> unreachable, List<LinkInfo> withoutMatch)
         {
             var lines = new List<string>
@@ -125,7 +130,6 @@ namespace CleanLinks.Commands
                 }
             }
 
-            // Молчание про необработанные связи читается как «сделано везде», а это неправда.
             if (withoutMatch.Count > 0)
             {
                 lines.Add(string.Empty);
@@ -140,18 +144,12 @@ namespace CleanLinks.Commands
                 lines.AddRange(unreachable.Select(l => "• " + l.Name + " — " + l.WorksetProblem));
             }
 
-            lines.Add(string.Empty);
-            lines.Add("Подробности: " + Diagnostics.LogPath);
-
-            var dialog = new TaskDialog("Чистые связи")
-            {
-                MainInstruction = result.WorksetChanged == planned && result.Failures.Count == 0
-                    ? "Готово"
-                    : "Выполнено частично",
-                MainContent = string.Join("\n", lines)
-            };
-
-            dialog.Show();
+            string head = result.WorksetChanged == planned && result.Failures.Count == 0
+                ? "Готово."
+                : "Выполнено частично.";
+            RevitWindow.ShowDialog(
+                new InfoWindow400(head + Environment.NewLine + Environment.NewLine + string.Join("\n", lines)),
+                uiapp);
         }
     }
 
@@ -167,33 +165,26 @@ namespace CleanLinks.Commands
         /// <summary>Что уточнить в окне подтверждения сверх общего текста. null — ничего.</summary>
         protected virtual string Warning => null;
 
-        protected override List<WorksetCategory> ChooseCategories(List<LinkInfo> links)
+        protected override List<WorksetCategory> ChooseCategories(UIApplication uiapp, List<LinkInfo> links)
         {
             var categories = new List<WorksetCategory> { Category };
             List<LinkPlan> plans = BuildPlans(links, categories);
 
             if (plans.Count == 0)
             {
-                ShowNothingToDo(links, categories);
+                ShowNothingToDo(uiapp, links, categories);
                 return null;
             }
 
-            return Confirm(links, categories, plans) ? categories : null;
+            return Confirm(uiapp, links, categories, plans) ? categories : null;
         }
 
-        private bool Confirm(List<LinkInfo> links, List<WorksetCategory> categories, List<LinkPlan> plans)
+        private bool Confirm(UIApplication uiapp, List<LinkInfo> links, List<WorksetCategory> categories, List<LinkPlan> plans)
         {
-            var dialog = new TaskDialog("Чистые связи")
-            {
-                // Имя группы как есть, в кавычках: приведённое к нижнему регистру «арматура»
-                // не согласуется по падежу с «выключить».
-                MainInstruction = "Выключить «" + Category.Name + "» во всех связях?",
-                MainContent = string.Join("\n", ConfirmationLines(links, categories, plans)),
-                CommonButtons = TaskDialogCommonButtons.Yes | TaskDialogCommonButtons.No,
-                DefaultButton = TaskDialogResult.Yes
-            };
-
-            return dialog.Show() == TaskDialogResult.Yes;
+            var window = new TNovUtils.LinkWorksets.ConfirmLinksWindow(
+                "Выключить «" + Category.Name + "» во всех связях?",
+                string.Join(Environment.NewLine, ConfirmationLines(links, categories, plans)));
+            return RevitWindow.ShowDialog(window, uiapp) == true;
         }
 
         /// <summary>Текст подтверждения. Отдельно от показа окна — так его видно и без Revit.</summary>
@@ -262,7 +253,7 @@ namespace CleanLinks.Commands
             if (untouched.Count > 12) lines.Add("… и ещё " + (untouched.Count - 12));
         }
 
-        private void ShowNothingToDo(List<LinkInfo> links, List<WorksetCategory> categories)
+        private void ShowNothingToDo(UIApplication uiapp, List<LinkInfo> links, List<WorksetCategory> categories)
         {
             var lines = new List<string>
             {
@@ -270,14 +261,9 @@ namespace CleanLinks.Commands
             };
 
             AppendUntouched(lines, links, categories);
-
-            var dialog = new TaskDialog("Чистые связи")
-            {
-                MainInstruction = "Закрывать нечего",
-                MainContent = string.Join("\n", lines)
-            };
-
-            dialog.Show();
+            RevitWindow.ShowDialog(
+                new InfoWindow400("Закрывать нечего." + Environment.NewLine + Environment.NewLine + string.Join("\n", lines)),
+                uiapp);
         }
     }
 }

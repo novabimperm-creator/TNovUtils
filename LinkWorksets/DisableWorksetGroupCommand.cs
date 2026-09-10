@@ -31,11 +31,12 @@ namespace TNovUtils.LinkWorksets
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
             if (RevitAPI.UiApplication == null) RevitAPI.Initialize(commandData);
+            UIApplication uiapp = commandData.Application;
 
-            UIDocument uidoc = commandData.Application.ActiveUIDocument;
+            UIDocument uidoc = uiapp.ActiveUIDocument;
             if (uidoc == null)
             {
-                new InfoWindow280("Нет открытой модели.").ShowDialog();
+                RevitWindow.ShowDialog(new InfoWindow280("Нет открытой модели."), uiapp);
                 return Result.Cancelled;
             }
 
@@ -50,7 +51,7 @@ namespace TNovUtils.LinkWorksets
                 if (links.Count == 0)
                 {
                     Logger.Log("В проекте нет RVT-связей. Завершение работы.", 3);
-                    new InfoWindow280("В проекте нет RVT-связей.").ShowDialog();
+                    RevitWindow.ShowDialog(new InfoWindow280("В проекте нет RVT-связей."), uiapp);
                     return Result.Cancelled;
                 }
 
@@ -58,13 +59,14 @@ namespace TNovUtils.LinkWorksets
                 if (requests.Count == 0)
                 {
                     Logger.Log("Закрывать нечего. Завершение работы.", 3);
-                    new InfoWindow400("Закрывать нечего: подходящие наборы либо не найдены, либо уже закрыты."
-                                      + Environment.NewLine + Environment.NewLine
-                                      + Untouched(links)).ShowDialog();
+                    string empty = "Закрывать нечего: подходящие наборы либо не найдены, либо уже закрыты."
+                                   + Environment.NewLine + Environment.NewLine
+                                   + Untouched(links);
+                    RevitWindow.ShowDialog(new InfoWindow400(empty), uiapp);
                     return Result.Cancelled;
                 }
 
-                if (!Confirm(links, requests))
+                if (!Confirm(uiapp, links, requests))
                 {
                     Logger.Log("Запуск отменен пользователем. Завершение работы.", 3);
                     return Result.Cancelled;
@@ -75,12 +77,13 @@ namespace TNovUtils.LinkWorksets
 
                 Logger.Log("Закрыто в " + result.Changed + " связи(ях) из " + requests.Count
                            + ", ошибок: " + result.Failures.Count, 5);
-                new InfoWindow400(Report(links, requests, result)).ShowDialog();
+                RevitWindow.ShowDialog(new InfoWindow400(Report(links, requests, result)), uiapp);
                 return Result.Succeeded;
             }
             catch (Exception ex)
             {
                 Logger.Log("Ошибка: " + ex.Message, 4);
+                RevitWindow.ShowDialog(new InfoWindow280("Не удалось выключить наборы: " + ex.Message), uiapp);
                 message = ex.Message;
                 return Result.Failed;
             }
@@ -108,7 +111,7 @@ namespace TNovUtils.LinkWorksets
             return requests;
         }
 
-        private bool Confirm(List<LinkInfo> links, List<CloseRequest> requests)
+        private bool Confirm(UIApplication uiapp, List<LinkInfo> links, List<CloseRequest> requests)
         {
             int worksets = requests.Sum(r => r.WorksetNames.Count);
 
@@ -135,18 +138,10 @@ namespace TNovUtils.LinkWorksets
             lines.Add("Действует на весь проект, включая 3D и разрезы. Связи при этом перезагружаются.");
             if (Warning != null) lines.Add(Warning);
 
-            var viewModel = new QuestionWindowViewModel
-            {
-                // Имя группы как есть, в кавычках: приведённое к нижнему регистру «арматура»
-                // не согласуется по падежу с «выключить».
-                headtxt = "Выключить «" + Group.Name + "» во всех связях?" + Environment.NewLine
-                          + Environment.NewLine + string.Join(Environment.NewLine, lines)
-            };
-
-            var window = new QuestionWindow280(viewModel);
-            viewModel.CloseRequest += (s, e) => window.Close();
-            bool? answer = window.ShowDialog();
-            return answer == true;
+            var window = new ConfirmLinksWindow(
+                "Выключить «" + Group.Name + "» во всех связях?",
+                string.Join(Environment.NewLine, lines));
+            return RevitWindow.ShowDialog(window, uiapp) == true;
         }
 
         /// <summary>

@@ -5,14 +5,5 @@
     <Compile Update="CleanLinks\src\CleanLinks\UI\CategoryPickerForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Update="CleanLinks\src\CleanLinks\UI\LinkManagerForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Update="CleanLinks\src\CleanLinks\UI\LinkWorksetsForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Update="CleanLinks\src\CleanLinks\UI\ProgressForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
   </ItemGroup>
 </Project>

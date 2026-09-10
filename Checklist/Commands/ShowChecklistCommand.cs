@@ -36,13 +36,22 @@ namespace TNovUtils.Checklist.Commands
                 return Result.Cancelled;
             }
 
+            DateTime dateTime = DateTime.Now;
+            string version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
+            const string commandName = "Чек-лист";
+            TNovConfigLoad.LoadConfig(commandName, version);
+            Logger.Initialize(commandName, dateTime, version);
+            Logger.Log("Открытие окна чек-листа", 0);
+
             try
             {
                 ChecklistHost.ShowOrActivate(uiapp);
+                Logger.Log("Окно чек-листа открыто", 1);
                 return Result.Succeeded;
             }
             catch (Exception ex)
             {
+                Logger.Log("Ошибка открытия чек-листа: " + ex, 4);
                 message = Flatten(ex);
                 return Result.Failed;
             }

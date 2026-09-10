@@ -399,7 +399,7 @@ namespace TNovUtils.Issues.UI
                 StatusActions.Children.Add(new TextBlock
                 {
                     Text = "Статус меняют автор, ответственные и администратор",
-                    Foreground = (System.Windows.Media.Brush)FindResource("Muted"),
+                    Foreground = (System.Windows.Media.Brush)FindResource("MutedBrush"),
                     FontSize = 11,
                     Margin = new Thickness(0, 0, 6, 6),
                     VerticalAlignment = VerticalAlignment.Center,

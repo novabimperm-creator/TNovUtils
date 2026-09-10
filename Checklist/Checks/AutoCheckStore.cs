@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Windows.Threading;
 using Autodesk.Revit.DB;
 using TNovCommon;
@@ -24,7 +23,6 @@ namespace TNovUtils.Checklist.Checks
         public const int RoomDepartmentNumber = 8;
 
         private readonly string _jsonPath;
-        private readonly Dispatcher _dispatcher;
         private readonly DispatcherTimer _timer;
         private bool _busy;
         private bool _disposed;
@@ -36,7 +34,6 @@ namespace TNovUtils.Checklist.Checks
 
         public AutoCheckStore(Document doc)
         {
-            _dispatcher = Dispatcher.CurrentDispatcher;
             _jsonPath = JsonDataService.GetJsonPath(doc, "autocheck");
             LogsRootFolder = string.IsNullOrEmpty(_jsonPath)
                 ? null
@@ -118,6 +115,7 @@ namespace TNovUtils.Checklist.Checks
             }
             catch (Exception ex)
             {
+                Logger.Log("Не удалось загрузить автопроверки: " + ex.Message, 4);
                 new InfoWindow280($"Не удалось загрузить автопроверки: {ex.Message}").ShowDialog();
                 _items = new List<AutoCheckItem>();
             }
@@ -144,24 +142,22 @@ namespace TNovUtils.Checklist.Checks
                 .Select(i => (i.Number, i.CreationDate, i.IsChecked, i.Title))
                 .ToList();
 
-            Task.Run(() =>
+            // LoadAuto ходит в RevitAPI — только с UI-потока, не из Task.Run.
+            try
             {
-                try
-                {
-                    var server = JsonDataService.LoadAuto(_jsonPath, DateTime.Now);
-                    _dispatcher.Invoke(() =>
-                    {
-                        if (_busy || _disposed) return;
-                        if (!HasMeaningfulChange(snapshot, server)) return;
+                var server = JsonDataService.LoadAuto(_jsonPath, DateTime.Now);
+                if (_busy || _disposed) return;
+                if (!HasMeaningfulChange(snapshot, server)) return;
 
-                        _items = server;
-                        foreach (var item in _items)
-                            item.SetLogsRootFolder(LogsRootFolder);
-                        Changed?.Invoke(this, EventArgs.Empty);
-                    });
-                }
-                catch { /* опрос не должен ронять окно */ }
-            });
+                _items = server;
+                foreach (var item in _items)
+                    item.SetLogsRootFolder(LogsRootFolder);
+                Changed?.Invoke(this, EventArgs.Empty);
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("Ошибка опроса autocheck.json: " + ex.Message, 2);
+            }
         }
 
         private static bool HasMeaningfulChange(

@@ -123,7 +123,7 @@
                                 <ToggleButton IsChecked="{Binding IsSelected, Mode=TwoWay}"
                                               Style="{StaticResource TreeCheckToggleStyle}"/>
                                 <TextBlock Text="{Binding Name}"
-                                           Foreground="White"
+                                           Foreground="{StaticResource PrimaryTextBrush}"
                                            VerticalAlignment="Center"/>
                             </StackPanel>
                         </DataTemplate>
@@ -135,7 +135,7 @@
                                               Checked="CategoryCheckBox_Checked"
                                               Unchecked="CategoryCheckBox_Checked"/>
                                 <TextBlock Text="{Binding Name}"
-                                           Foreground="White"
+                                           Foreground="{StaticResource PrimaryTextBrush}"
                                            FontWeight="SemiBold"
                                            VerticalAlignment="Center"/>
                             </StackPanel>

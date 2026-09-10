@@ -5,6 +5,7 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
+using TNovCommon;
 using TNovUtils.Checklist.Checks;
 
 namespace TNovUtils.Checklist.UI
@@ -17,6 +18,8 @@ namespace TNovUtils.Checklist.UI
 
         public ChecklistWindow(UIDocument uidoc)
         {
+            Dispatcher.UnhandledException += OnDispatcherUnhandledException;
+
             InitializeComponent();
 
             var doc = uidoc.Document;
@@ -29,6 +32,7 @@ namespace TNovUtils.Checklist.UI
             DataContext = _vm;
             Closed += (s, e) =>
             {
+                Dispatcher.UnhandledException -= OnDispatcherUnhandledException;
                 _store.Dispose();
                 _bimStore.Dispose();
                 _vm.DisposeViews();
@@ -39,16 +43,42 @@ namespace TNovUtils.Checklist.UI
 
         private System.Windows.Controls.UserControl CreateView(string id, CheckRegistry registry, Document doc)
         {
-            if (id == CheckRegistry.SummaryId)
-                return new SummaryControl(registry, _store, _bimStore, _vm.Select, doc);
+            Logger.Log("Создание представления «" + id + "»", 1);
+            try
+            {
+                if (id == CheckRegistry.SummaryId)
+                    return new SummaryControl(registry, _store, _bimStore, _vm.Select, doc);
 
-            if (id == CheckRegistry.BimChecksId)
-                return new BimChecksControl(_bimStore);
+                if (id == CheckRegistry.BimChecksId)
+                    return new BimChecksControl(_bimStore);
 
-            var check = registry.Find(id);
-            return check != null
-                ? check.CreateView()
-                : new System.Windows.Controls.UserControl();
+                var check = registry.Find(id);
+                if (check == null)
+                {
+                    Logger.Log("Проверка «" + id + "» не найдена в реестре", 4);
+                    return new System.Windows.Controls.UserControl();
+                }
+
+                Logger.Log("CreateView: " + check.Title + " (" + check.Id + ")", 1);
+                return check.CreateView();
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("Ошибка CreateView «" + id + "»: " + ex, 4);
+                new InfoWindow400("Не удалось открыть проверку:\n" + ex.Message).ShowDialog();
+                return new System.Windows.Controls.UserControl();
+            }
+        }
+
+        private static void OnDispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
+        {
+            Logger.Log("Необработанное исключение Dispatcher: " + e.Exception, 4);
+            e.Handled = true;
+            try
+            {
+                new InfoWindow400("Ошибка чек-листа:\n" + e.Exception.Message).ShowDialog();
+            }
+            catch { }
         }
 
         private void Window_SourceInitialized(object sender, EventArgs e)

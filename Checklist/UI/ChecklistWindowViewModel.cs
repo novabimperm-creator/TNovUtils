@@ -84,15 +84,25 @@ namespace TNovUtils.Checklist.UI
         {
             if (string.IsNullOrEmpty(id)) return;
 
-            if (!_cache.TryGetValue(id, out var view))
+            Logger.Log("Переход к «" + id + "»", 1);
+            try
             {
-                view = _createView(id);
-                _cache[id] = view;
-            }
+                if (!_cache.TryGetValue(id, out var view))
+                {
+                    view = _createView(id);
+                    _cache[id] = view;
+                }
 
-            CurrentContent = view;
-            foreach (var nav in NavItems)
-                nav.IsSelected = nav.Id == id;
+                CurrentContent = view;
+                foreach (var nav in NavItems)
+                    nav.IsSelected = nav.Id == id;
+                Logger.Log("Отображается «" + id + "»", 1);
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("Ошибка перехода к «" + id + "»: " + ex, 4);
+                new InfoWindow400("Не удалось открыть раздел:\n" + ex.Message).ShowDialog();
+            }
         }
 
         public void DisposeViews()

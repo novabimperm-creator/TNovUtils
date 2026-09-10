@@ -53,12 +53,27 @@ namespace TNovUtils.Checklist.UI
             _resultTitle = defaultResultTitle;
             _run = run;
             _dispatcher = System.Windows.Threading.Dispatcher.CurrentDispatcher;
-            _store.Changed += (s, e) => Reload();
-            Reload();
+            _store.Changed += OnStoreChanged;
+            try
+            {
+                Reload();
+                Logger.Log("AutoCheckDetailViewModel Reload: " + StatusText + ", «" + ResultTitle + "»", 1);
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("Ошибка Reload при открытии #" + number + ": " + ex, 4);
+                throw;
+            }
 
             RunCommand = new RelayCommand2(_ => Run());
             OpenLogCommand = new RelayCommand2(_ => OpenLog());
             SelectElemsCommand = new RelayCommand2(_ => SelectElems());
+        }
+
+        private void OnStoreChanged(object sender, EventArgs e)
+        {
+            try { Reload(); }
+            catch (Exception ex) { Logger.Log("Ошибка Reload по Changed #" + _number + ": " + ex, 4); }
         }
 
         private void Reload()
@@ -77,20 +92,27 @@ namespace TNovUtils.Checklist.UI
 
         private void Run()
         {
+            Logger.Log("Запуск проверки #" + _number + " «" + HeaderTitle + "»", 1);
             _store.SetBusy(true);
             ChecklistRevitBridge.Enqueue(app =>
             {
                 try
                 {
                     var uidoc = app.ActiveUIDocument;
-                    if (uidoc == null) return;
+                    if (uidoc == null)
+                    {
+                        Logger.Log("Нет активного документа, проверка #" + _number + " пропущена", 3);
+                        return;
+                    }
 
                     var result = _run(uidoc.Document);
                     string userName = app.Application.Username;
+                    Logger.Log("Проверка #" + _number + " завершена, passed=" + result.Passed, 1);
                     _dispatcher.Invoke(() => _store.ApplyRun(_number, result, userName));
                 }
                 catch (Exception ex)
                 {
+                    Logger.Log("Ошибка выполнения проверки #" + _number + ": " + ex, 4);
                     _dispatcher.Invoke(() =>
                         new InfoWindow280($"Не удалось выполнить проверку: {ex.Message}").ShowDialog());
                 }
@@ -107,10 +129,12 @@ namespace TNovUtils.Checklist.UI
             if (item == null || string.IsNullOrEmpty(item.LogFullPath)) return;
             try
             {
+                Logger.Log("Открытие лога проверки #" + _number + ": " + item.LogFullPath + ".txt", 2);
                 System.Diagnostics.Process.Start("notepad.exe", item.LogFullPath + ".txt");
             }
             catch (Exception ex)
             {
+                Logger.Log("Не удалось открыть лог проверки #" + _number + ": " + ex.Message, 4);
                 new InfoWindow400($"Не удалось открыть файл: {ex.Message}").ShowDialog();
             }
         }
@@ -118,6 +142,7 @@ namespace TNovUtils.Checklist.UI
         private void SelectElems()
         {
             if (string.IsNullOrWhiteSpace(ElemIds)) return;
+            Logger.Log("Выбор элементов проверки #" + _number + ": " + ElemIds, 1);
             var parts = ElemIds.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
             ChecklistRevitBridge.SelectElements(parts);
         }

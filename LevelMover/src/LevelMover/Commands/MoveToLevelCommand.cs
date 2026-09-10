@@ -1,12 +1,12 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Windows.Forms;
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using LevelMover.Core;
 using LevelMover.UI;
+using TNovCommon;
 
 namespace LevelMover.Commands
 {
@@ -19,10 +19,11 @@ namespace LevelMover.Commands
     {
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
-            UIDocument uiDocument = commandData.Application.ActiveUIDocument;
+            UIApplication uiapp = commandData.Application;
+            UIDocument uiDocument = uiapp.ActiveUIDocument;
             if (uiDocument == null)
             {
-                TaskDialog.Show("Перенос элементов", "Откройте проект.");
+                RevitWindow.ShowDialog(new InfoWindow280("Нет открытой модели."), uiapp);
                 return Result.Cancelled;
             }
 
@@ -31,13 +32,12 @@ namespace LevelMover.Commands
             ICollection<ElementId> selectedIds = uiDocument.Selection.GetElementIds();
             if (selectedIds.Count == 0)
             {
-                TaskDialog.Show("Перенос элементов",
-                    "Сначала выделите элементы в проекте, а затем нажмите «Перенести».");
+                RevitWindow.ShowDialog(
+                    new InfoWindow280("Сначала выделите элементы в проекте, а затем нажмите «Перенести»."),
+                    uiapp);
                 return Result.Cancelled;
             }
 
-            // Типоразмеры попадают в выделение через диспетчер проекта, а уровня у них нет —
-            // отчёт из-за них разбухал бы пустыми строками.
             List<Element> targets = selectedIds
                 .Select(id => document.GetElement(id))
                 .Where(element => element != null && !(element is ElementType))
@@ -45,7 +45,7 @@ namespace LevelMover.Commands
 
             if (targets.Count == 0)
             {
-                TaskDialog.Show("Перенос элементов", "В выделении нет элементов модели.");
+                RevitWindow.ShowDialog(new InfoWindow280("В выделении нет элементов модели."), uiapp);
                 return Result.Cancelled;
             }
 
@@ -57,20 +57,15 @@ namespace LevelMover.Commands
 
             if (levels.Count == 0)
             {
-                TaskDialog.Show("Перенос элементов", "В проекте нет уровней.");
+                RevitWindow.ShowDialog(new InfoWindow280("В проекте нет уровней."), uiapp);
                 return Result.Cancelled;
             }
 
-            ElementId baseLevelId;
-            ElementId topLevelId;
+            var picker = new MoveElementsWindow(levels, targets.Count);
+            if (RevitWindow.ShowDialog(picker, uiapp) != true) return Result.Cancelled;
 
-            using (var form = new MoveElementsForm(levels, targets.Count))
-            {
-                if (form.ShowDialog() != DialogResult.OK) return Result.Cancelled;
-
-                baseLevelId = form.BaseLevelId;
-                topLevelId = form.TopLevelId;
-            }
+            ElementId baseLevelId = picker.BaseLevelId;
+            ElementId topLevelId = picker.TopLevelId;
 
             List<MoveResult> results;
             using (var transaction = new Transaction(document, "Перенос элементов на другой уровень"))
@@ -80,31 +75,28 @@ namespace LevelMover.Commands
                 transaction.Commit();
             }
 
-            ShowReport(uiDocument, results);
+            ShowReport(uiapp, uiDocument, results);
             return Result.Succeeded;
         }
 
-        private static void ShowReport(UIDocument uiDocument, List<MoveResult> results)
+        private static void ShowReport(UIApplication uiapp, UIDocument uiDocument, List<MoveResult> results)
         {
             List<MoveResult> skipped = results.Where(r => !r.Moved).ToList();
 
             if (skipped.Count == 0)
             {
-                TaskDialog.Show("Перенос элементов",
-                    "Перенесено элементов: " + results.Count.ToString(CultureInfo.CurrentCulture) +
-                    ". Расположение сохранено.");
+                RevitWindow.ShowDialog(
+                    new InfoWindow280(
+                        "Перенесено элементов: " + results.Count.ToString(CultureInfo.CurrentCulture) +
+                        ". Расположение сохранено."),
+                    uiapp);
                 return;
             }
 
-            using (var report = new ReportForm(results))
+            var report = new MoveReportWindow(results);
+            if (RevitWindow.ShowDialog(report, uiapp) == true && report.SelectSkipped)
             {
-                report.ShowDialog();
-
-                // Выделение переносим на непереехавшие: иначе их пришлось бы искать по ID вручную.
-                if (report.SelectSkipped)
-                {
-                    uiDocument.Selection.SetElementIds(skipped.Select(r => r.Id).ToList());
-                }
+                uiDocument.Selection.SetElementIds(skipped.Select(r => r.Id).ToList());
             }
         }
     }

@@ -75,7 +75,7 @@
                                               Style="{StaticResource TreeCheckToggleStyle}"
                                               Uid="{Binding Id}"/>
                                 <TextBlock Text="{Binding Text}"
-                                           Foreground="White"
+                                           Foreground="{StaticResource PrimaryTextBrush}"
                                            VerticalAlignment="Center"/>
                             </StackPanel>
                         </HierarchicalDataTemplate>

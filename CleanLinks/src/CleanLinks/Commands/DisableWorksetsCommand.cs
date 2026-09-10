@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Autodesk.Revit.Attributes;
+using Autodesk.Revit.UI;
 using CleanLinks.Core;
 using CleanLinks.UI;
 
@@ -14,7 +15,7 @@ namespace CleanLinks.Commands
     [Regeneration(RegenerationOption.Manual)]
     public class DisableWorksetsCommand : DisableWorksetsCommandBase
     {
-        protected override List<WorksetCategory> ChooseCategories(List<LinkInfo> links)
+        protected override List<WorksetCategory> ChooseCategories(UIApplication uiapp, List<LinkInfo> links)
         {
             using (var picker = new CategoryPickerForm(links))
             {

@@ -6,6 +6,7 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using CleanLinks.Core;
 using CleanLinks.UI;
+using TNovCommon;
 
 namespace CleanLinks.Commands
 {
@@ -19,11 +20,12 @@ namespace CleanLinks.Commands
     {
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
-            UIDocument uiDoc = commandData.Application.ActiveUIDocument;
+            UIApplication uiapp = commandData.Application;
+            UIDocument uiDoc = uiapp.ActiveUIDocument;
             if (uiDoc == null)
             {
-                message = "Нет открытого проекта.";
-                return Result.Failed;
+                RevitWindow.ShowDialog(new InfoWindow280("Нет открытой модели."), uiapp);
+                return Result.Cancelled;
             }
 
             Document doc = uiDoc.Document;
@@ -32,60 +34,54 @@ namespace CleanLinks.Commands
             List<LinkInfo> links = LinkManager.Collect(doc, activeView);
             if (links.Count == 0)
             {
-                TaskDialog.Show("Чистые связи", "В проекте нет RVT-связей.");
+                RevitWindow.ShowDialog(new InfoWindow280("В проекте нет RVT-связей."), uiapp);
                 return Result.Cancelled;
             }
 
-            IList<LinkPlan> plans;
-            using (var window = new LinkManagerForm(links, activeView))
-            {
-                if (window.ShowDialog() != System.Windows.Forms.DialogResult.OK)
-                {
-                    return Result.Cancelled;
-                }
+            var window = new LinkManagerWindow(links, activeView);
+            if (RevitWindow.ShowDialog(window, uiapp) != true)
+                return Result.Cancelled;
 
-                plans = window.Plans;
-            }
-
+            IList<LinkPlan> plans = window.Plans;
             if (plans.All(p => p.IsEmpty))
-            {
                 return Result.Cancelled;
-            }
 
             try
             {
                 ApplyResult result;
-                using (var progress = new ProgressForm("Применяю изменения к связям"))
+                var progress = new LinkProgressWindow();
+                RevitWindow.Show(progress, uiapp);
+                try
                 {
-                    progress.ShowOver(commandData.Application.MainWindowHandle);
-                    // Транзакцию открывает сам LinkManager: перезагрузка связи внутри неё запрещена.
                     result = LinkManager.Apply(doc, activeView, plans, progress);
                     progress.Finish();
                 }
+                finally
+                {
+                    progress.Close();
+                }
 
-                ShowReport(result);
+                ShowReport(uiapp, result);
                 return Result.Succeeded;
             }
             catch (Exception ex)
             {
+                RevitWindow.ShowDialog(new InfoWindow280("Не удалось применить изменения: " + ex.Message), uiapp);
                 message = ex.Message;
                 return Result.Failed;
             }
         }
 
-        private static void ShowReport(ApplyResult result)
+        private static void ShowReport(UIApplication uiapp, ApplyResult result)
         {
             var lines = new List<string>();
             if (result.WorksetChanged > 0) lines.Add("Рабочие наборы изменены: " + result.WorksetChanged);
             if (result.StateChanged > 0) lines.Add("Связей загружено или выгружено: " + result.StateChanged);
             if (result.ViewChanged > 0) lines.Add("Графика изменена в виде у связей: " + result.ViewChanged);
 
-            var dialog = new TaskDialog("Чистые связи")
-            {
-                MainInstruction = result.TotalChanged > 0
-                    ? "Изменено связей: " + result.TotalChanged
-                    : "Ничего не изменилось"
-            };
+            string head = result.TotalChanged > 0
+                ? "Изменено связей: " + result.TotalChanged
+                : "Ничего не изменилось";
 
             if (result.Notes.Count > 0)
             {
@@ -99,16 +95,11 @@ namespace CleanLinks.Commands
                 lines.Add("С ошибками: " + result.Failures.Count);
                 lines.AddRange(result.Failures.Take(10).Select(f => "• " + f));
                 if (result.Failures.Count > 10)
-                {
                     lines.Add("… и ещё " + (result.Failures.Count - 10));
-                }
             }
 
-            lines.Add(string.Empty);
-            lines.Add("Подробности: " + Diagnostics.LogPath);
-
-            dialog.MainContent = string.Join("\n", lines);
-            dialog.Show();
+            string body = lines.Count == 0 ? head : head + Environment.NewLine + Environment.NewLine + string.Join("\n", lines);
+            RevitWindow.ShowDialog(new InfoWindow400(body), uiapp);
         }
     }
 }

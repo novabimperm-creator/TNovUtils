@@ -21,14 +21,6 @@
                 <ResourceDictionary Source="/TNovCommon;component/Styles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
 
-            <!-- Локальные алиасы: сохраняем прежние ключи, палитра — тёмная тема -->
-            <SolidColorBrush x:Key="Emerald" Color="#37C871"/>
-            <SolidColorBrush x:Key="EmeraldDark" Color="#2A9D5A"/>
-            <SolidColorBrush x:Key="Ink" Color="#FFFFFF"/>
-            <SolidColorBrush x:Key="Muted" Color="#8FB3A2"/>
-            <SolidColorBrush x:Key="Line" Color="#2A4D38"/>
-            <SolidColorBrush x:Key="Card" Color="#1E2E26"/>
-
             <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource RunButtonStyle}">
                 <Setter Property="Padding" Value="16,8"/>
                 <Setter Property="FontWeight" Value="SemiBold"/>
@@ -50,26 +42,26 @@
             <Style x:Key="Pill" TargetType="RadioButton">
                 <Setter Property="Margin" Value="0,0,6,0"/>
                 <Setter Property="Cursor" Value="Hand"/>
-                <Setter Property="Foreground" Value="{StaticResource Ink}"/>
+                <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}"/>
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="RadioButton">
                             <Border x:Name="b"
                                     CornerRadius="16"
-                                    Background="{StaticResource Card}"
-                                    BorderBrush="{StaticResource Line}"
+                                    Background="{StaticResource CardBrush}"
+                                    BorderBrush="{StaticResource TreeToggleBorderBrush}"
                                     BorderThickness="1"
                                     Padding="12,5">
                                 <ContentPresenter VerticalAlignment="Center"/>
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsChecked" Value="True">
-                                    <Setter TargetName="b" Property="Background" Value="{StaticResource Emerald}"/>
-                                    <Setter TargetName="b" Property="BorderBrush" Value="{StaticResource Emerald}"/>
-                                    <Setter Property="Foreground" Value="#14201A"/>
+                                    <Setter TargetName="b" Property="Background" Value="{StaticResource AccentBrush}"/>
+                                    <Setter TargetName="b" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                    <Setter Property="Foreground" Value="{StaticResource DarkBrush}"/>
                                 </Trigger>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="b" Property="BorderBrush" Value="{StaticResource Emerald}"/>
+                                    <Setter TargetName="b" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
@@ -80,26 +72,26 @@
             <Style x:Key="MinePill" TargetType="ToggleButton">
                 <Setter Property="Margin" Value="0,0,6,0"/>
                 <Setter Property="Cursor" Value="Hand"/>
-                <Setter Property="Foreground" Value="{StaticResource Ink}"/>
+                <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}"/>
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="ToggleButton">
                             <Border x:Name="b"
                                     CornerRadius="16"
-                                    Background="{StaticResource Card}"
-                                    BorderBrush="{StaticResource Line}"
+                                    Background="{StaticResource CardBrush}"
+                                    BorderBrush="{StaticResource TreeToggleBorderBrush}"
                                     BorderThickness="1"
                                     Padding="14,6">
                                 <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center"/>
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsChecked" Value="True">
-                                    <Setter TargetName="b" Property="Background" Value="{StaticResource Emerald}"/>
-                                    <Setter TargetName="b" Property="BorderBrush" Value="{StaticResource Emerald}"/>
-                                    <Setter Property="Foreground" Value="#14201A"/>
+                                    <Setter TargetName="b" Property="Background" Value="{StaticResource AccentBrush}"/>
+                                    <Setter TargetName="b" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                    <Setter Property="Foreground" Value="{StaticResource DarkBrush}"/>
                                 </Trigger>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="b" Property="BorderBrush" Value="{StaticResource Emerald}"/>
+                                    <Setter TargetName="b" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
@@ -113,7 +105,7 @@
             </Style>
 
             <Style x:Key="IssuesListViewItem" TargetType="ListViewItem">
-                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}"/>
                 <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                 <Setter Property="Padding" Value="2,4"/>
                 <Setter Property="Template">
@@ -129,14 +121,14 @@
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsSelected" Value="True">
-                                    <Setter TargetName="Bd" Property="Background" Value="#2A4D3A"/>
+                                    <Setter TargetName="Bd" Property="Background" Value="{StaticResource SelectedHoverBrush}"/>
                                 </Trigger>
                                 <MultiTrigger>
                                     <MultiTrigger.Conditions>
                                         <Condition Property="IsMouseOver" Value="True"/>
                                         <Condition Property="IsSelected" Value="False"/>
                                     </MultiTrigger.Conditions>
-                                    <Setter TargetName="Bd" Property="Background" Value="#243830"/>
+                                    <Setter TargetName="Bd" Property="Background" Value="{StaticResource RowHoverBrush}"/>
                                 </MultiTrigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
@@ -145,11 +137,11 @@
             </Style>
 
             <Style TargetType="GridViewColumnHeader">
-                <Setter Property="Background" Value="{StaticResource Card}"/>
-                <Setter Property="Foreground" Value="{StaticResource Emerald}"/>
+                <Setter Property="Background" Value="{StaticResource CardBrush}"/>
+                <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
                 <Setter Property="FontWeight" Value="SemiBold"/>
                 <Setter Property="Padding" Value="10,8"/>
-                <Setter Property="BorderBrush" Value="{StaticResource Line}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource TreeToggleBorderBrush}"/>
                 <Setter Property="BorderThickness" Value="0,0,0,1"/>
                 <Setter Property="HorizontalContentAlignment" Value="Left"/>
             </Style>
@@ -183,20 +175,20 @@
                 <StackPanel Orientation="Horizontal">
                     <Viewbox Width="34" Height="34" Margin="0,0,12,0">
                         <Canvas Width="24" Height="24">
-                            <Path Data="M12,2 L22,7 L12,12 L2,7 Z" Fill="#37C871"/>
-                            <Path Data="M2,12 L12,17 L22,12" Stroke="#37C871" StrokeThickness="2" StrokeLineJoin="Round"/>
-                            <Path Data="M2,17 L12,22 L22,17" Stroke="#37C871" StrokeThickness="2" StrokeLineJoin="Round"/>
+                            <Path Data="M12,2 L22,7 L12,12 L2,7 Z" Fill="{StaticResource AccentBrush}"/>
+                            <Path Data="M2,12 L12,17 L22,12" Stroke="{StaticResource AccentBrush}" StrokeThickness="2" StrokeLineJoin="Round"/>
+                            <Path Data="M2,17 L12,22 L22,17" Stroke="{StaticResource AccentBrush}" StrokeThickness="2" StrokeLineJoin="Round"/>
                         </Canvas>
                     </Viewbox>
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="Вопросы"
                                    FontSize="22"
                                    FontWeight="Bold"
-                                   Foreground="{StaticResource Ink}"/>
+                                   Foreground="{StaticResource PrimaryTextBrush}"/>
                         <TextBlock x:Name="SubTitle"
                                    Text="BIM-замечания и коллизии"
                                    FontSize="12"
-                                   Foreground="{StaticResource Muted}"/>
+                                   Foreground="{StaticResource MutedBrush}"/>
                     </StackPanel>
                 </StackPanel>
                 <StackPanel Grid.Column="1"
@@ -242,12 +234,12 @@
             <Border DockPanel.Dock="Top"
                     Margin="0,0,0,12"
                     Padding="0,0,0,12"
-                    BorderBrush="{StaticResource Line}"
+                    BorderBrush="{StaticResource TreeToggleBorderBrush}"
                     BorderThickness="0,0,0,1">
                 <WrapPanel Orientation="Horizontal">
                     <Border CornerRadius="8"
-                            Background="{StaticResource Card}"
-                            BorderBrush="{StaticResource Line}"
+                            Background="{StaticResource CardBrush}"
+                            BorderBrush="{StaticResource TreeToggleBorderBrush}"
                             BorderThickness="1"
                             Margin="0,0,12,6"
                             Width="240">
@@ -255,12 +247,12 @@
                             <TextBlock Text="🔍"
                                        Margin="8,0,0,0"
                                        VerticalAlignment="Center"
-                                       Foreground="{StaticResource Muted}"/>
+                                       Foreground="{StaticResource MutedBrush}"/>
                             <TextBox x:Name="SearchBox"
                                      BorderThickness="0"
                                      Background="Transparent"
-                                     Foreground="White"
-                                     CaretBrush="White"
+                                     Foreground="{StaticResource PrimaryTextBrush}"
+                                     CaretBrush="{StaticResource PrimaryTextBrush}"
                                      Padding="28,7,8,7"
                                      VerticalContentAlignment="Center"
                                      TextChanged="Search_Changed"/>
@@ -268,7 +260,7 @@
                                        Text="Поиск по содержанию…"
                                        Margin="28,0,0,0"
                                        VerticalAlignment="Center"
-                                       Foreground="{StaticResource Muted}"
+                                       Foreground="{StaticResource MutedBrush}"
                                        IsHitTestVisible="False"/>
                         </Grid>
                     </Border>
@@ -304,7 +296,7 @@
                                      Tag="completed"
                                      Checked="StatusPill_Checked">
                             <StackPanel Orientation="Horizontal">
-                                <Ellipse Width="8" Height="8" Fill="#37C871" Margin="0,0,6,0"/>
+                                <Ellipse Width="8" Height="8" Fill="{StaticResource AccentBrush}" Margin="0,0,6,0"/>
                                 <TextBlock Text="Выполнено"/>
                             </StackPanel>
                         </RadioButton>
@@ -313,7 +305,7 @@
                                      Tag="closed"
                                      Checked="StatusPill_Checked">
                             <StackPanel Orientation="Horizontal">
-                                <Ellipse Width="8" Height="8" Fill="#8FB3A2" Margin="0,0,6,0"/>
+                                <Ellipse Width="8" Height="8" Fill="{StaticResource MutedBrush}" Margin="0,0,6,0"/>
                                 <TextBlock Text="Закрыто"/>
                             </StackPanel>
                         </RadioButton>
@@ -345,7 +337,7 @@
                     Margin="0,8,0,0">
                 <TextBlock x:Name="StatusBar"
                            Text="Готово"
-                           Foreground="{StaticResource Muted}"
+                           Foreground="{StaticResource MutedBrush}"
                            FontSize="11"/>
             </Border>
 
@@ -359,14 +351,14 @@
 
                 <Border Grid.Column="0"
                         CornerRadius="10"
-                        Background="{StaticResource Card}"
-                        BorderBrush="{StaticResource Line}"
+                        Background="{StaticResource CardBrush}"
+                        BorderBrush="{StaticResource TreeToggleBorderBrush}"
                         BorderThickness="1">
                     <Grid>
                         <ListView x:Name="IssuesList"
                                   Background="Transparent"
                                   BorderThickness="0"
-                                  Foreground="White"
+                                  Foreground="{StaticResource PrimaryTextBrush}"
                                   VerticalAlignment="Stretch"
                                   HorizontalAlignment="Stretch"
                                   ScrollViewer.HorizontalScrollBarVisibility="Auto"
@@ -405,21 +397,21 @@
                             <Viewbox Width="56" Height="56" Margin="0,0,0,10">
                                 <Canvas Width="24" Height="24">
                                     <Path Data="M12,2 L22,7 L12,12 L2,7 Z"
-                                          Stroke="#4A6B5C"
+                                          Stroke="{StaticResource MutedBrush}"
                                           StrokeThickness="1.6"
                                           StrokeLineJoin="Round"/>
                                     <Path Data="M2,12 L12,17 L22,12"
-                                          Stroke="#4A6B5C"
+                                          Stroke="{StaticResource MutedBrush}"
                                           StrokeThickness="1.6"
                                           StrokeLineJoin="Round"/>
                                     <Path Data="M2,17 L12,22 L22,17"
-                                          Stroke="#4A6B5C"
+                                          Stroke="{StaticResource MutedBrush}"
                                           StrokeThickness="1.6"
                                           StrokeLineJoin="Round"/>
                                 </Canvas>
                             </Viewbox>
                             <TextBlock Text="Вопросов нет."
-                                       Foreground="{StaticResource Muted}"
+                                       Foreground="{StaticResource MutedBrush}"
                                        HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Grid>
@@ -434,8 +426,8 @@
                 <Border Grid.Column="2"
                         x:Name="DetailCard"
                         CornerRadius="10"
-                        Background="{StaticResource Card}"
-                        BorderBrush="{StaticResource Line}"
+                        Background="{StaticResource CardBrush}"
+                        BorderBrush="{StaticResource TreeToggleBorderBrush}"
                         BorderThickness="1"
                         Visibility="Collapsed">
                     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="14">
@@ -449,7 +441,7 @@
                                            FontSize="15"
                                            FontWeight="Bold"
                                            TextWrapping="Wrap"
-                                           Foreground="{StaticResource Ink}"/>
+                                           Foreground="{StaticResource PrimaryTextBrush}"/>
                                 <Button Grid.Column="1"
                                         Content="✕"
                                         Style="{StaticResource CompactGhostButton}"
@@ -457,7 +449,7 @@
                                         Click="CloseDetail_Click"/>
                             </Grid>
                             <TextBlock x:Name="DetailMeta"
-                                       Foreground="{StaticResource Muted}"
+                                       Foreground="{StaticResource MutedBrush}"
                                        Margin="0,2,0,10"
                                        FontSize="11"/>
 
@@ -491,7 +483,7 @@
                             <TextBlock x:Name="DetailAssignees"
                                        TextWrapping="Wrap"
                                        Margin="0,2,0,10"
-                                       Foreground="{StaticResource Ink}"/>
+                                       Foreground="{StaticResource PrimaryTextBrush}"/>
 
                             <TextBlock Text="Модели и элементы"
                                        Style="{StaticResource PanelHeaderStyle}"/>
@@ -507,7 +499,7 @@
                                             <TextBlock Text="{Binding SlotLabel}"
                                                        VerticalAlignment="Center"
                                                        Margin="8,0,0,0"
-                                                       Foreground="White"/>
+                                                       Foreground="{StaticResource PrimaryTextBrush}"/>
                                         </StackPanel>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>

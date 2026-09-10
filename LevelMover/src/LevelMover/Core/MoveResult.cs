@@ -3,7 +3,7 @@ using Autodesk.Revit.DB;
 namespace LevelMover.Core
 {
     /// <summary>Что стало с одним элементом. Пропуск всегда назван причиной — молча не теряем ничего.</summary>
-    internal class MoveResult
+    public class MoveResult
     {
         public MoveResult(ElementId id, string description)
         {
