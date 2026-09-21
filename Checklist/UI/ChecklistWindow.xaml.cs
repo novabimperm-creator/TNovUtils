@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Shell;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using TNovCommon;
@@ -15,6 +16,13 @@ namespace TNovUtils.Checklist.UI
         private readonly AutoCheckStore _store;
         private readonly BimCheckStore _bimStore;
         private readonly ChecklistWindowViewModel _vm;
+        private const double CollapsedOpacity = 0.55;
+        private bool _isCollapsed;
+        private double _restoreHeight;
+        private double _restoreWidth;
+        private double _restoreMinHeight;
+        private double _restoreMinWidth;
+        private ResizeMode _restoreResizeMode;
 
         public ChecklistWindow(UIDocument uidoc)
         {
@@ -101,6 +109,96 @@ namespace TNovUtils.Checklist.UI
 
         private void Minimize_Click(object sender, RoutedEventArgs e) =>
             WindowState = WindowState.Minimized;
+
+        private void CollapseButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_isCollapsed)
+                ExpandFromStrip();
+            else
+                CollapseToStrip();
+        }
+
+        private void CollapseToStrip()
+        {
+            if (WindowState == WindowState.Maximized)
+                WindowState = WindowState.Normal;
+
+            _restoreHeight = ActualHeight;
+            _restoreWidth = ActualWidth;
+            _restoreMinHeight = MinHeight;
+            _restoreMinWidth = MinWidth;
+            _restoreResizeMode = ResizeMode;
+
+            ContentHost.Visibility = System.Windows.Visibility.Collapsed;
+            ContentRow.Height = new GridLength(0);
+            MinimizeButton.Visibility = System.Windows.Visibility.Collapsed;
+            CloseButton.Visibility = System.Windows.Visibility.Collapsed;
+            SubTitle.Visibility = System.Windows.Visibility.Collapsed;
+            TitleColumn.Width = GridLength.Auto;
+            TitlePanel.Margin = new Thickness(0, 0, 12, 0);
+            CollapseButton.Content = "v";
+            CollapseButton.ToolTip = "Развернуть";
+            CollapseButton.Margin = new Thickness(0);
+
+            MinHeight = 0;
+            MinWidth = 0;
+            UpdateLayout();
+            SizeToContent = SizeToContent.WidthAndHeight;
+            ResizeMode = ResizeMode.NoResize;
+            Opacity = IsMouseOver ? 1 : CollapsedOpacity;
+
+            var chrome = WindowChrome.GetWindowChrome(this);
+            if (chrome != null)
+            {
+                chrome.CaptionHeight = 0;
+                chrome.ResizeBorderThickness = new Thickness(0);
+            }
+
+            _isCollapsed = true;
+        }
+
+        private void ExpandFromStrip()
+        {
+            SizeToContent = SizeToContent.Manual;
+            ContentRow.Height = new GridLength(1, GridUnitType.Star);
+            ContentHost.Visibility = System.Windows.Visibility.Visible;
+            MinimizeButton.Visibility = System.Windows.Visibility.Visible;
+            CloseButton.Visibility = System.Windows.Visibility.Visible;
+            SubTitle.Visibility = System.Windows.Visibility.Visible;
+            TitleColumn.Width = new GridLength(1, GridUnitType.Star);
+            TitlePanel.Margin = new Thickness(0);
+            CollapseButton.Content = "^";
+            CollapseButton.ToolTip = "Свернуть в полоску";
+            CollapseButton.Margin = new Thickness(0, 0, 6, 0);
+
+            MinHeight = _restoreMinHeight;
+            MinWidth = _restoreMinWidth;
+            Width = _restoreWidth;
+            Height = _restoreHeight;
+            ResizeMode = _restoreResizeMode;
+            Opacity = 1;
+
+            var chrome = WindowChrome.GetWindowChrome(this);
+            if (chrome != null)
+            {
+                chrome.CaptionHeight = 30;
+                chrome.ResizeBorderThickness = new Thickness(5);
+            }
+
+            _isCollapsed = false;
+        }
+
+        private void Window_MouseEnter(object sender, MouseEventArgs e)
+        {
+            if (_isCollapsed)
+                Opacity = 1;
+        }
+
+        private void Window_MouseLeave(object sender, MouseEventArgs e)
+        {
+            if (_isCollapsed)
+                Opacity = CollapsedOpacity;
+        }
 
         private void CloseButton_Click(object sender, RoutedEventArgs e) => Close();
 

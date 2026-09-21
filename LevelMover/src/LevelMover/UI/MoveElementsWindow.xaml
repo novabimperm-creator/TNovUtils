@@ -1,0 +1,116 @@
+<Window x:Class="LevelMover.UI.MoveElementsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Перенос элементов"
+        Width="520"
+        Height="420"
+        MinWidth="440"
+        MinHeight="360"
+        WindowStartupLocation="CenterOwner"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        WindowStyle="None">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/TNovCommon;component/Styles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="30"
+                      ResizeBorderThickness="5"
+                      GlassFrameThickness="0"
+                      CornerRadius="12"/>
+    </WindowChrome.WindowChrome>
+
+    <Border CornerRadius="12"
+            Background="{StaticResource BgBrush}"
+            BorderBrush="{StaticResource AccentBrush}"
+            BorderThickness="1">
+        <Grid Margin="12">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0"
+                    MouseDown="TitleBar_MouseDown"
+                    Background="Transparent"
+                    Margin="6,6,6,10">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="35"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="ПЕРЕНОС ЭЛЕМЕНТОВ"
+                               Foreground="{StaticResource AccentBrush}"
+                               FontSize="16"
+                               FontWeight="Bold"
+                               VerticalAlignment="Center"/>
+                    <Button Content="✕"
+                            Grid.Column="1"
+                            HorizontalAlignment="Right"
+                            Style="{StaticResource CloseButtonStyleMini}"
+                            Click="Cancel_Click"
+                            WindowChrome.IsHitTestVisibleInChrome="True"/>
+                </Grid>
+            </Border>
+
+            <TextBlock x:Name="SelectionText"
+                       Grid.Row="1"
+                       Style="{StaticResource DialogMessageStyle}"
+                       Margin="0,0,0,14"/>
+
+            <StackPanel Grid.Row="2" Margin="0,0,0,12">
+                <TextBlock Text="Уровень, на который перенести"
+                           Style="{StaticResource PanelHeaderStyle}"
+                           FontSize="13"
+                           Margin="0,0,0,8"/>
+                <ComboBox x:Name="BaseLevelBox"
+                          Style="{StaticResource DarkComboBoxStyle}"
+                          DisplayMemberPath="Display"
+                          SelectionChanged="BaseLevel_Changed"/>
+            </StackPanel>
+
+            <StackPanel Grid.Row="3">
+                <TextBlock Text="Верхний уровень"
+                           Style="{StaticResource PanelHeaderStyle}"
+                           FontSize="13"
+                           Margin="0,0,0,8"/>
+                <ComboBox x:Name="TopLevelBox"
+                          Style="{StaticResource DarkComboBoxStyle}"
+                          DisplayMemberPath="Display"/>
+                <TextBlock Text="Для стен, колонн и семейств на двух уровнях. Верх останется на прежней отметке."
+                           Style="{StaticResource DialogHintStyle}"
+                           Margin="0,8,0,0"/>
+            </StackPanel>
+
+            <Grid Grid.Row="4" Margin="0,16,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Button Content="Отмена"
+                        Style="{StaticResource SecondaryButtonStyle}"
+                        IsCancel="True"
+                        Click="Cancel_Click"/>
+                <Button x:Name="OkButton"
+                        Grid.Column="2"
+                        Content="Готово"
+                        Style="{StaticResource RunButtonStyle}"
+                        Margin="0"
+                        IsEnabled="False"
+                        IsDefault="True"
+                        Click="Ok_Click"/>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

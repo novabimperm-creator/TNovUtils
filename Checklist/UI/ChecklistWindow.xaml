@@ -13,7 +13,9 @@
         Background="Transparent"
         ResizeMode="CanResize"
         WindowStyle="None"
-        SourceInitialized="Window_SourceInitialized">
+        SourceInitialized="Window_SourceInitialized"
+        MouseEnter="Window_MouseEnter"
+        MouseLeave="Window_MouseLeave">
 
     <Window.Resources>
         <ResourceDictionary>
@@ -44,21 +46,23 @@
         <Grid Margin="12">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
+                <RowDefinition x:Name="ContentRow" Height="*"/>
             </Grid.RowDefinitions>
 
-            <Border Grid.Row="0"
+            <Border x:Name="TitleBar"
+                    Grid.Row="0"
                     MouseDown="TitleBar_MouseDown"
                     Background="Transparent"
                     Cursor="Arrow"
                     Margin="6,6,6,10">
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="35"/>
-                        <ColumnDefinition Width="35"/>
+                        <ColumnDefinition x:Name="TitleColumn" Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <StackPanel x:Name="TitlePanel"
+                                Orientation="Horizontal"
+                                VerticalAlignment="Center">
                         <TextBlock Text="ЧЕК-ЛИСТ"
                                    Foreground="{StaticResource AccentBrush}"
                                    FontSize="22"
@@ -70,24 +74,35 @@
                                    Foreground="{StaticResource MutedBrush}"
                                    VerticalAlignment="Center"/>
                     </StackPanel>
-                    <Button Content="–"
-                            Grid.Column="1"
-                            HorizontalAlignment="Right"
-                            Style="{StaticResource CloseButtonStyleMini}"
-                            Click="Minimize_Click"
-                            ToolTip="Свернуть"
-                            WindowChrome.IsHitTestVisibleInChrome="True"/>
-                    <Button Content="✕"
-                            Grid.Column="2"
-                            HorizontalAlignment="Right"
-                            Style="{StaticResource CloseButtonStyleMini}"
-                            Click="CloseButton_Click"
-                            ToolTip="Закрыть"
-                            WindowChrome.IsHitTestVisibleInChrome="True"/>
+                    <StackPanel Grid.Column="1"
+                                Orientation="Horizontal"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center">
+                        <Button x:Name="MinimizeButton"
+                                Content="–"
+                                Style="{StaticResource CloseButtonStyleMini}"
+                                Margin="0,0,6,0"
+                                Click="Minimize_Click"
+                                ToolTip="Свернуть"
+                                WindowChrome.IsHitTestVisibleInChrome="True"/>
+                        <Button x:Name="CollapseButton"
+                                Content="^"
+                                Style="{StaticResource CloseButtonStyleMini}"
+                                Margin="0,0,6,0"
+                                Click="CollapseButton_Click"
+                                ToolTip="Свернуть в полоску"
+                                WindowChrome.IsHitTestVisibleInChrome="True"/>
+                        <Button x:Name="CloseButton"
+                                Content="✕"
+                                Style="{StaticResource CloseButtonStyleMini}"
+                                Click="CloseButton_Click"
+                                ToolTip="Закрыть"
+                                WindowChrome.IsHitTestVisibleInChrome="True"/>
+                    </StackPanel>
                 </Grid>
             </Border>
 
-            <Grid Grid.Row="1">
+            <Grid x:Name="ContentHost" Grid.Row="1">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="220"/>
                     <ColumnDefinition Width="*"/>

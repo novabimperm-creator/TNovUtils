@@ -1,0 +1,114 @@
+<Window x:Class="CleanLinks.UI.LinkWorksetsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Рабочие наборы"
+        Width="520"
+        Height="500"
+        MinWidth="420"
+        MinHeight="360"
+        WindowStartupLocation="CenterOwner"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="CanResize"
+        WindowStyle="None">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/TNovCommon;component/Styles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="30"
+                      ResizeBorderThickness="5"
+                      GlassFrameThickness="0"
+                      CornerRadius="12"/>
+    </WindowChrome.WindowChrome>
+
+    <Border CornerRadius="12"
+            Background="{StaticResource BgBrush}"
+            BorderBrush="{StaticResource AccentBrush}"
+            BorderThickness="1">
+        <Grid Margin="12">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0"
+                    MouseDown="TitleBar_MouseDown"
+                    Background="Transparent"
+                    Margin="6,6,6,10">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="35"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="TitleText"
+                               Text="РАБОЧИЕ НАБОРЫ"
+                               Foreground="{StaticResource AccentBrush}"
+                               FontSize="16"
+                               FontWeight="Bold"
+                               VerticalAlignment="Center"/>
+                    <Button Content="✕"
+                            Grid.Column="1"
+                            HorizontalAlignment="Right"
+                            Style="{StaticResource CloseButtonStyleMini}"
+                            Click="Cancel_Click"
+                            WindowChrome.IsHitTestVisibleInChrome="True"/>
+                </Grid>
+            </Border>
+
+            <TextBlock Grid.Row="1"
+                       Style="{StaticResource DialogHintStyle}"
+                       Text="Отмеченные наборы будут закрыты — содержимое исчезнет из всех видов. Связь перезагрузится."
+                       Margin="0,0,0,10"/>
+
+            <Border Grid.Row="2"
+                    Style="{StaticResource PanelFrameStyle}"
+                    Margin="0,0,0,12">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ItemsControl x:Name="WorksetList" Margin="8">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <CheckBox Style="{StaticResource DarkCheckBoxStyle}"
+                                          Content="{Binding Display}"
+                                          IsChecked="{Binding IsChecked}"
+                                          Margin="0,4"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Border>
+
+            <Grid Grid.Row="3">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Button Content="Только оси"
+                        Style="{StaticResource SecondaryButtonStyle}"
+                        Click="GridsOnly_Click"/>
+                <Button Grid.Column="2"
+                        Content="Отмена"
+                        Style="{StaticResource SecondaryButtonStyle}"
+                        Margin="0"
+                        IsCancel="True"
+                        Click="Cancel_Click"/>
+                <Button Grid.Column="4"
+                        Content="Хорошо"
+                        Style="{StaticResource RunButtonStyle}"
+                        Margin="0"
+                        IsDefault="True"
+                        Click="Ok_Click"/>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

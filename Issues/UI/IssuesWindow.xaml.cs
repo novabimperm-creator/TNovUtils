@@ -10,6 +10,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media.Imaging;
+using System.Windows.Shell;
 using TNovUtils.Issues.Api;
 using TNovUtils.Issues.Revit;
 
@@ -28,6 +29,13 @@ namespace TNovUtils.Issues.UI
         private bool _authed;
         private bool _ready; // фильтры не дёргаем до окончания инициализации
         private CreateIssueWindow _createWindow; // одно немодальное окно создания за раз
+        private const double CollapsedOpacity = 0.55;
+        private bool _isCollapsed;
+        private double _restoreHeight;
+        private double _restoreWidth;
+        private double _restoreMinHeight;
+        private double _restoreMinWidth;
+        private ResizeMode _restoreResizeMode;
 
         private ApiClient Api => _session.Client;
 
@@ -526,6 +534,102 @@ namespace TNovUtils.Issues.UI
         private void Minimize_Click(object sender, RoutedEventArgs e)
         {
             WindowState = WindowState.Minimized;
+        }
+
+        private void CollapseButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_isCollapsed)
+                ExpandFromStrip();
+            else
+                CollapseToStrip();
+        }
+
+        private void CollapseToStrip()
+        {
+            if (WindowState == WindowState.Maximized)
+                WindowState = WindowState.Normal;
+
+            _restoreHeight = ActualHeight;
+            _restoreWidth = ActualWidth;
+            _restoreMinHeight = MinHeight;
+            _restoreMinWidth = MinWidth;
+            _restoreResizeMode = ResizeMode;
+
+            ContentHost.Visibility = System.Windows.Visibility.Collapsed;
+            ContentRow.Height = new GridLength(0);
+            TitleIcon.Visibility = System.Windows.Visibility.Collapsed;
+            SubTitle.Visibility = System.Windows.Visibility.Collapsed;
+            HeaderActions.Visibility = System.Windows.Visibility.Collapsed;
+            MinimizeButton.Visibility = System.Windows.Visibility.Collapsed;
+            CloseButton.Visibility = System.Windows.Visibility.Collapsed;
+            TitleColumn.Width = GridLength.Auto;
+            TitlePanel.Margin = new Thickness(0, 0, 12, 0);
+            TitleBar.Margin = new Thickness(0);
+            CollapseButton.Content = "v";
+            CollapseButton.ToolTip = "Развернуть";
+            CollapseButton.Margin = new Thickness(0);
+
+            MinHeight = 0;
+            MinWidth = 0;
+            UpdateLayout();
+            SizeToContent = SizeToContent.WidthAndHeight;
+            ResizeMode = ResizeMode.NoResize;
+            Opacity = IsMouseOver ? 1 : CollapsedOpacity;
+
+            var chrome = WindowChrome.GetWindowChrome(this);
+            if (chrome != null)
+            {
+                chrome.CaptionHeight = 0;
+                chrome.ResizeBorderThickness = new Thickness(0);
+            }
+
+            _isCollapsed = true;
+        }
+
+        private void ExpandFromStrip()
+        {
+            SizeToContent = SizeToContent.Manual;
+            ContentRow.Height = new GridLength(1, GridUnitType.Star);
+            ContentHost.Visibility = System.Windows.Visibility.Visible;
+            TitleIcon.Visibility = System.Windows.Visibility.Visible;
+            SubTitle.Visibility = System.Windows.Visibility.Visible;
+            HeaderActions.Visibility = System.Windows.Visibility.Visible;
+            MinimizeButton.Visibility = System.Windows.Visibility.Visible;
+            CloseButton.Visibility = System.Windows.Visibility.Visible;
+            TitleColumn.Width = new GridLength(1, GridUnitType.Star);
+            TitlePanel.Margin = new Thickness(0);
+            TitleBar.Margin = new Thickness(0, 0, 0, 12);
+            CollapseButton.Content = "^";
+            CollapseButton.ToolTip = "Свернуть в полоску";
+            CollapseButton.Margin = new Thickness(0, 0, 6, 0);
+
+            MinHeight = _restoreMinHeight;
+            MinWidth = _restoreMinWidth;
+            Width = _restoreWidth;
+            Height = _restoreHeight;
+            ResizeMode = _restoreResizeMode;
+            Opacity = 1;
+
+            var chrome = WindowChrome.GetWindowChrome(this);
+            if (chrome != null)
+            {
+                chrome.CaptionHeight = 0;
+                chrome.ResizeBorderThickness = new Thickness(6);
+            }
+
+            _isCollapsed = false;
+        }
+
+        private void Window_MouseEnter(object sender, MouseEventArgs e)
+        {
+            if (_isCollapsed)
+                Opacity = 1;
+        }
+
+        private void Window_MouseLeave(object sender, MouseEventArgs e)
+        {
+            if (_isCollapsed)
+                Opacity = CollapsedOpacity;
         }
 
         private void Cancel_Click(object sender, RoutedEventArgs e)

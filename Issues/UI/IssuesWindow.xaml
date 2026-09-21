@@ -13,7 +13,9 @@
         WindowStyle="None"
         ResizeMode="CanResizeWithGrip"
         SourceInitialized="Window_SourceInitialized"
-        Loaded="Window_Loaded">
+        Loaded="Window_Loaded"
+        MouseEnter="Window_MouseEnter"
+        MouseLeave="Window_MouseLeave">
 
     <Window.Resources>
         <ResourceDictionary>
@@ -160,20 +162,25 @@
             BorderBrush="{StaticResource AccentBrush}"
             BorderThickness="1"
             Margin="0">
-        <DockPanel Margin="16,12,16,12">
+        <Grid Margin="16,12,16,12">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition x:Name="ContentRow" Height="*"/>
+            </Grid.RowDefinitions>
 
             <!-- Шапка -->
-            <Grid DockPanel.Dock="Top"
+            <Grid x:Name="TitleBar"
+                  Grid.Row="0"
                   Margin="0,0,0,12"
                   MouseDown="TitleBar_MouseDown"
                   Background="Transparent"
                   Cursor="Arrow">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition x:Name="TitleColumn" Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <StackPanel Orientation="Horizontal">
-                    <Viewbox Width="34" Height="34" Margin="0,0,12,0">
+                <StackPanel x:Name="TitlePanel" Orientation="Horizontal">
+                    <Viewbox x:Name="TitleIcon" Width="34" Height="34" Margin="0,0,12,0">
                         <Canvas Width="24" Height="24">
                             <Path Data="M12,2 L22,7 L12,12 L2,7 Z" Fill="{StaticResource AccentBrush}"/>
                             <Path Data="M2,12 L12,17 L22,12" Stroke="{StaticResource AccentBrush}" StrokeThickness="2" StrokeLineJoin="Round"/>
@@ -194,35 +201,49 @@
                 <StackPanel Grid.Column="1"
                             Orientation="Horizontal"
                             VerticalAlignment="Center">
-                    <Button x:Name="NetCheckButton"
-                            Style="{StaticResource GhostButton}"
-                            Margin="0,0,10,0"
-                            Click="NetCheck_Click"
-                            ToolTip="Проверить связь с TNovPRO"
-                            Content="Проверка сети"/>
-                    <Button x:Name="LogoutButton"
-                            Style="{StaticResource GhostButton}"
-                            Margin="0,0,10,0"
-                            Click="Logout_Click"
-                            ToolTip="Выйти из профиля TNovPRO"
-                            Content="Выход"/>
-                    <Button x:Name="RefreshButton"
-                            Style="{StaticResource GhostButton}"
-                            Margin="0,0,10,0"
-                            Click="Refresh_Click"
-                            ToolTip="Обновить"
-                            Content="⟳"
-                            FontSize="15"/>
-                    <Button x:Name="CreateButton"
-                            Style="{StaticResource PrimaryButton}"
-                            Click="Create_Click"
-                            Content="+  Добавить"/>
-                    <Button Content="–" Margin="10,0,0,0"
+                    <StackPanel x:Name="HeaderActions"
+                                Orientation="Horizontal"
+                                VerticalAlignment="Center">
+                        <Button x:Name="NetCheckButton"
+                                Style="{StaticResource GhostButton}"
+                                Margin="0,0,10,0"
+                                Click="NetCheck_Click"
+                                ToolTip="Проверить связь с TNovPRO"
+                                Content="Проверка сети"/>
+                        <Button x:Name="LogoutButton"
+                                Style="{StaticResource GhostButton}"
+                                Margin="0,0,10,0"
+                                Click="Logout_Click"
+                                ToolTip="Выйти из профиля TNovPRO"
+                                Content="Выход"/>
+                        <Button x:Name="RefreshButton"
+                                Style="{StaticResource GhostButton}"
+                                Margin="0,0,10,0"
+                                Click="Refresh_Click"
+                                ToolTip="Обновить"
+                                Content="⟳"
+                                FontSize="15"/>
+                        <Button x:Name="CreateButton"
+                                Style="{StaticResource PrimaryButton}"
+                                Click="Create_Click"
+                                Content="+  Добавить"/>
+                    </StackPanel>
+                    <Button x:Name="MinimizeButton"
+                            Content="–"
+                            Margin="10,0,6,0"
                             Style="{StaticResource CloseButtonStyleMini}"
                             Click="Minimize_Click"
                             ToolTip="Свернуть"
                             WindowChrome.IsHitTestVisibleInChrome="True"/>
-                    <Button Content="✕" Margin="4,0,10,0"
+                    <Button x:Name="CollapseButton"
+                            Content="^"
+                            Margin="0,0,6,0"
+                            Style="{StaticResource CloseButtonStyleMini}"
+                            Click="CollapseButton_Click"
+                            ToolTip="Свернуть в полоску"
+                            WindowChrome.IsHitTestVisibleInChrome="True"/>
+                    <Button x:Name="CloseButton"
+                            Content="✕"
                             Style="{StaticResource CloseButtonStyleMini}"
                             Click="Cancel_Click"
                             ToolTip="Закрыть"
@@ -230,6 +251,7 @@
                 </StackPanel>
             </Grid>
 
+            <DockPanel x:Name="ContentHost" Grid.Row="1">
             <!-- Панель фильтров -->
             <Border DockPanel.Dock="Top"
                     Margin="0,0,0,12"
@@ -523,6 +545,7 @@
                     </ScrollViewer>
                 </Border>
             </Grid>
-        </DockPanel>
+            </DockPanel>
+        </Grid>
     </Border>
 </Window>
