@@ -5,6 +5,8 @@ using System.Linq;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 
+using static TNovCommon.ElementIdCompat;
+
 namespace TNovUtils.Issues.Revit
 {
     /// <summary>
@@ -165,7 +167,7 @@ namespace TNovUtils.Issues.Revit
 #if R2027
                         result.Add(id.Value); // Revit 2024+: 64-битный ElementId
 #else
-                        result.Add(id.IntegerValue);
+                        result.Add(id.IntValue());
 #endif
                 onResult?.Invoke(result);
             });

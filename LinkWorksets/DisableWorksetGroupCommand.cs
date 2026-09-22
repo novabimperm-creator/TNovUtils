@@ -42,6 +42,9 @@ namespace TNovUtils.LinkWorksets
 
             Document doc = uidoc.Document;
             string version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
+            // Регистрируем запуск: usage-лог и автоконтекст панели справки
+            // (HelpContextMap сводит CommandName к разделу «Связи проекта»).
+            TNovConfigLoad.LoadConfig(CommandName, version);
             Logger.Initialize(CommandName, DateTime.Now, version);
             Logger.Log("Выключение группы «" + Group.Name + "» во всех RVT-связях", 0);
 

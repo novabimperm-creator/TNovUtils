@@ -54,11 +54,7 @@
                                FontSize="20"
                                FontWeight="Bold"
                                VerticalAlignment="Center"/>
-                    <Button Content="i"
-                            Grid.Column="1"
-                            Style="{StaticResource CloseButtonStyleMini}"
-                            Click="HelpButton_Click"
-                            WindowChrome.IsHitTestVisibleInChrome="True"/>
+                    
                     <Button Content="✕"
                             Grid.Column="2"
                             Style="{StaticResource CloseButtonStyleMini}"

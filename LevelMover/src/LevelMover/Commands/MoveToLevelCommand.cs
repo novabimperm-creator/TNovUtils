@@ -29,6 +29,10 @@ namespace LevelMover.Commands
 
             Document document = uiDocument.Document;
 
+            // Регистрируем запуск: usage-лог и автоконтекст панели справки.
+            string tnovVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
+            TNovConfigLoad.LoadConfig("Перенести", tnovVersion);
+
             ICollection<ElementId> selectedIds = uiDocument.Selection.GetElementIds();
             if (selectedIds.Count == 0)
             {

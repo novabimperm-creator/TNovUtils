@@ -8,6 +8,8 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using TNovUtils.Issues.Revit;
 
+using static TNovCommon.ElementIdCompat;
+
 namespace TNovUtils.Issues.Commands
 {
     /// <summary>
@@ -33,7 +35,7 @@ namespace TNovUtils.Issues.Commands
 #if R2027
                 .Select(id => id.Value) // Revit 2024+: 64-битный ElementId.Value
 #else
-                .Select(id => (long)id.IntegerValue)
+                .Select(id => id.LongValue())
 #endif
                 .ToList();
 

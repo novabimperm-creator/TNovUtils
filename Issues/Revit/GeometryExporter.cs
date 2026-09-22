@@ -6,6 +6,8 @@ using System.Text;
 using Autodesk.Revit.DB;
 using Newtonsoft.Json;
 
+using static TNovCommon.ElementIdCompat;
+
 namespace TNovUtils.Issues.Revit
 {
     /// <summary>
@@ -82,7 +84,7 @@ namespace TNovUtils.Issues.Revit
 #if R2027
                 .Where(el => !selectedSet.Contains(el.Id.Value))
 #else
-                .Where(el => !selectedSet.Contains(el.Id.IntegerValue))
+                .Where(el => !selectedSet.Contains(el.Id.IntValue()))
 #endif
                 .Where(el => el.Category != null && el.Category.CategoryType == CategoryType.Model)
                 .Select(el => new { el, dist = DistanceToCenter(el, center) })

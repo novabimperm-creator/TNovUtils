@@ -44,6 +44,13 @@ namespace TNovUtils.Issues.Commands
                 return Result.Cancelled;
             }
 
+            // Регистрируем запуск: запись в usage-лог на шаре и автоконтекст панели
+            // справки (HelpContextMap сводит это имя к разделу «Вопросы»).
+            // Ставим после блокирующих проверок, чтобы отменённые запуски не попадали
+            // в статистику — так же сделано в ShowChecklistCommand.
+            string version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
+            TNovConfigLoad.LoadConfig("Вопросы TNovPRO", version);
+
             try
             {
                 // Немодальное окно: singleton, владелец — главное окно Revit.

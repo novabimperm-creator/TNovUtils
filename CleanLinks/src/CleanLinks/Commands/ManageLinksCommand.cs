@@ -31,6 +31,10 @@ namespace CleanLinks.Commands
             Document doc = uiDoc.Document;
             View activeView = uiDoc.ActiveView;
 
+            // Регистрируем запуск: usage-лог и автоконтекст панели справки.
+            string version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
+            TNovConfigLoad.LoadConfig("Связи проекта", version);
+
             List<LinkInfo> links = LinkManager.Collect(doc, activeView);
             if (links.Count == 0)
             {

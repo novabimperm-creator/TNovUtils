@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Globalization;
 using Autodesk.Revit.DB;
 
+using static TNovCommon.ElementIdCompat;
+
 namespace LevelMover.Core
 {
     /// <summary>
@@ -217,7 +219,7 @@ namespace LevelMover.Core
                 name = string.Empty;
             }
 
-            string id = "(ID " + element.Id.IntegerValue.ToString(CultureInfo.InvariantCulture) + ")";
+            string id = "(ID " + element.Id.IntValue().ToString(CultureInfo.InvariantCulture) + ")";
             return string.IsNullOrEmpty(name) ? category + " " + id : category + ": " + name + " " + id;
         }
 

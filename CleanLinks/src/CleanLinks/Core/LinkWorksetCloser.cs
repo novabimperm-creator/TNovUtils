@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Autodesk.Revit.DB;
 
+using static TNovCommon.ElementIdCompat;
+
 namespace CleanLinks.Core
 {
     /// <summary>Какие наборы связи закрыть, какие открыть.</summary>
