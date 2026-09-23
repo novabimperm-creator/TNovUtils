@@ -100,7 +100,7 @@ namespace TNovUtils
             {
                 Logger.Log("Сценарий 1 - библиотека семейств", 1);
 
-string libraryPath = @"\\fs-nova\NOVA\04_БИБЛИОТЕКА\BIM";
+string libraryPath = TNovPaths.BimLibrary;
                 if (!Directory.Exists(libraryPath))
                 {
                     new InfoWindow400($"Папка не найдена: {libraryPath}\nПроверьте доступность сетевого диска.").ShowDialog();

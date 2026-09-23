@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using TNovCommon;
+using TNovCommon.Server;
 
 namespace TNovUtils
 {
@@ -24,10 +25,9 @@ namespace TNovUtils
             string RequestFoldersDir = Path.Combine(RootFolder, "RequestFolders");
             try
             {
-                if (!Directory.Exists(RootFolder))
-                    Directory.CreateDirectory(RootFolder);
-                if (!Directory.Exists(RequestFoldersDir))
-                    Directory.CreateDirectory(RequestFoldersDir);
+                // CreateDirectory сам проверяет существование — отдельный Exists лишь добавлял запрос к серверу.
+                ServerDirectories.Ensure(RootFolder);
+                ServerDirectories.Ensure(RequestFoldersDir);
             }
             catch (Exception ex)
             {
@@ -40,15 +40,43 @@ namespace TNovUtils
             TNovConfig config = TNovConfigLoad.LoadConfig();
             string RootFolder = config.ServerPath + @"familyrequests";
             string CounterFile = Path.Combine(RootFolder, "request_counter.txt");
-            int nextNumber = 1;
-            if (File.Exists(CounterFile))
+
+            // TODO: перенести на счётчик API (/counters/{name}/next) — файловый счётчик временный.
+            // Файл открывается эксклюзивно (FileShare.None): чтение, инкремент и запись идут через
+            // один дескриптор, поэтому два пользователя не получат одинаковый номер. Если файл занят
+            // другим пользователем — повторяем с паузой, но не дольше ~5 с.
+            var timeout = TimeSpan.FromSeconds(5);
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            var rnd = new Random();
+            while (true)
             {
-                string content = File.ReadAllText(CounterFile).Trim();
-                if (int.TryParse(content, out int lastNumber))
-                    nextNumber = lastNumber + 1;
+                try
+                {
+                    using (var fs = new FileStream(CounterFile, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None))
+                    {
+                        int nextNumber = 1;
+                        var encoding = new System.Text.UTF8Encoding(false);
+                        using (var reader = new StreamReader(fs, encoding, true, 1024, leaveOpen: true))
+                        {
+                            string content = reader.ReadToEnd().Trim();
+                            if (int.TryParse(content, out int lastNumber))
+                                nextNumber = lastNumber + 1;
+                        }
+
+                        byte[] bytes = encoding.GetBytes(nextNumber.ToString());
+                        fs.SetLength(0);
+                        fs.Position = 0;
+                        fs.Write(bytes, 0, bytes.Length);
+                        fs.Flush(true);
+                        return nextNumber.ToString("D4");
+                    }
+                }
+                catch (IOException) when (sw.Elapsed < timeout)
+                {
+                    // Файл держит другой пользователь (sharing violation) — ждём 100–200 мс.
+                    System.Threading.Thread.Sleep(100 + rnd.Next(101));
+                }
             }
-            File.WriteAllText(CounterFile, nextNumber.ToString());
-            return nextNumber.ToString("D4");
         }
 
         public static List<RequestModel> LoadRequests()
@@ -109,8 +137,7 @@ namespace TNovUtils
             try
             {
                 string path = Path.Combine(RequestFoldersDir, requestId);
-                if (!Directory.Exists(path))
-                    Directory.CreateDirectory(path);
+                Directory.CreateDirectory(path); // no-op, если папка уже есть
             }
             catch (Exception ex)
             {

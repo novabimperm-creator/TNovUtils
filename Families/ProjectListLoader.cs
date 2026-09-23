@@ -12,15 +12,13 @@ namespace TNovUtils
 
         public static List<string> LoadProjectNames()
         {
-            TNovConfig config = TNovConfigLoad.LoadConfig();
-            string CdeFilePath = config.ServerPath + "CDE.txt";
             var names = new List<string>();
             try
             {
-                if (!File.Exists(CdeFilePath))
+                if (!TNovCommon.Server.ServerData.TryReadAllLines("CDE.txt", out string[] cdeLines))
                     return names;
 
-                foreach (string line in File.ReadLines(CdeFilePath))
+                foreach (string line in cdeLines)
                 {
                     if (string.IsNullOrWhiteSpace(line))
                         continue;

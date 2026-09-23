@@ -50,10 +50,63 @@ namespace TNovUtils
             {
                 var items = cache.Values.ToList();
                 string json = JsonConvert.SerializeObject(items);//, new JsonSerializerOptions { WriteIndented = true });
-                File.WriteAllText(CacheFile, json);
+                WriteAtomic(CacheFile, json);
                 File.WriteAllText(CacheTimeFile, DateTime.Now.ToString("O"));
             }
             catch { }
+        }
+
+        /// <summary>
+        /// Запись через временный файл в той же папке + File.Replace/Move: читатель
+        /// (другой пользователь) никогда не увидит наполовину записанный кэш.
+        /// </summary>
+        private static void WriteAtomic(string path, string content)
+        {
+            string tmp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            try
+            {
+                File.WriteAllText(tmp, content);
+                if (File.Exists(path))
+                    File.Replace(tmp, path, null);
+                else
+                    File.Move(tmp, path);
+            }
+            finally
+            {
+                try { if (File.Exists(tmp)) File.Delete(tmp); } catch { }
+            }
+        }
+
+        /// <summary>
+        /// Обновить/добавить запись в уже загруженном кэше (без чтения/записи файла).
+        /// Потокобезопасно для ConcurrentDictionary — для параллельного сканирования:
+        /// LoadCache один раз → ApplyScannedFile на каждый .rfa → SaveCache один раз.
+        /// </summary>
+        public static FamilyCacheItem ApplyScannedFile(
+            System.Collections.Concurrent.ConcurrentDictionary<string, FamilyCacheItem> cache,
+            string filePath, string category, DateTime currentModified)
+        {
+            var item = cache.GetOrAdd(filePath, key => new FamilyCacheItem
+            {
+                FullPath = key,
+                Name = Path.GetFileNameWithoutExtension(key),
+                Category = category,
+                VersionNumber = 0,
+                VersionString = "v0"
+            });
+
+            lock (item)
+            {
+                // Новая запись: LastModified по умолчанию ≠ дате файла → v1, как раньше.
+                if (item.LastModified != currentModified)
+                {
+                    item.LastModified = currentModified;
+                    item.VersionNumber++;
+                    item.VersionString = $"v{item.VersionNumber}";
+                }
+                item.Category = category;
+            }
+            return item;
         }
 
         /// <summary>
@@ -100,37 +153,16 @@ namespace TNovUtils
             return actualFolders.Length != cachedCategories.Count;
         }
 
+        /// <summary>
+        /// Одиночное обновление: читает и пишет весь families_cache.json.
+        /// Не вызывать в цикле по файлам — для сканирования есть <see cref="ApplyScannedFile"/>.
+        /// </summary>
         public static FamilyCacheItem UpdateOrCreateItem(string filePath, string category, DateTime currentModified)
         {
-            var cache = LoadCache();
-            if (cache.TryGetValue(filePath, out var existing))
-            {
-                if (existing.LastModified != currentModified)
-                {
-                    existing.LastModified = currentModified;
-                    existing.VersionNumber++;
-                    existing.VersionString = $"v{existing.VersionNumber}";
-                }
-                existing.Category = category;
-                cache[filePath] = existing;
-                SaveCache(cache);
-                return existing;
-            }
-            else
-            {
-                var newItem = new FamilyCacheItem
-                {
-                    FullPath = filePath,
-                    Name = Path.GetFileNameWithoutExtension(filePath),
-                    Category = category,
-                    LastModified = currentModified,
-                    VersionNumber = 1,
-                    VersionString = "v1"
-                };
-                cache[filePath] = newItem;
-                SaveCache(cache);
-                return newItem;
-            }
+            var cache = new System.Collections.Concurrent.ConcurrentDictionary<string, FamilyCacheItem>(LoadCache());
+            var item = ApplyScannedFile(cache, filePath, category, currentModified);
+            SaveCache(new Dictionary<string, FamilyCacheItem>(cache));
+            return item;
         }
     }
 }

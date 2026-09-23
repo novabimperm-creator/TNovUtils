@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 using System.Windows.Data;
 using System.Windows.Threading;
 using TNovCommon;
+using TNovCommon.Server;
+using TNovUtils.Checklist.Checks;
 
 namespace TNovUtils.Checklist.UI
 {
@@ -16,7 +18,7 @@ namespace TNovUtils.Checklist.UI
     {
         private readonly string _jsonPath;
         private readonly Dispatcher _dispatcher;
-        private readonly DispatcherTimer _timer;
+        private readonly ServerFilePoller<System.Collections.Generic.List<CheckItem>> _poller;
         private bool _isEditing;
         private bool _disposed;
 
@@ -52,7 +54,7 @@ namespace TNovUtils.Checklist.UI
                 if (string.IsNullOrEmpty(_jsonPath)) return null;
                 string folder = Path.Combine(Path.GetDirectoryName(_jsonPath),
                     Path.GetFileNameWithoutExtension(_jsonPath) + "_photos");
-                Directory.CreateDirectory(folder);
+                ServerDirectories.Ensure(folder); // свойство читается на каждый пункт — без повторных запросов к серверу
                 return folder;
             }
         }
@@ -87,9 +89,14 @@ namespace TNovUtils.Checklist.UI
             Items.CollectionChanged += (s, e) => UpdateCreators();
             UpdateCreators();
 
-            _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
-            _timer.Tick += (s, e) => Poll();
-            _timer.Start();
+            _poller = new ServerFilePoller<System.Collections.Generic.List<CheckItem>>(
+                _jsonPath,
+                _dispatcher,
+                () => !_isEditing && !_disposed,
+                () => JsonDataService.Load(_jsonPath),
+                ApplyPolled,
+                "checklist.json");
+            _poller.Start();
 
             AddCommand = new RelayCommand2(_ => AddItem());
             RemoveCommand = new RelayCommand2(obj => RemoveItem(obj as CheckItem));
@@ -103,8 +110,11 @@ namespace TNovUtils.Checklist.UI
         {
             if (_disposed) return;
             _disposed = true;
-            _timer.Stop();
+            _poller.Dispose();
         }
+
+        /// <summary>Внеочередная проверка сервера (без блокировки UI).</summary>
+        public void CheckServerNow() => _poller.CheckNow();
 
         private void AddItem()
         {
@@ -307,36 +317,24 @@ namespace TNovUtils.Checklist.UI
             }
         }
 
-        private void Poll()
+        /// <summary>UI-поток: результат фонового чтения. false — идёт редактирование, повторить позже.</summary>
+        private bool ApplyPolled(System.Collections.Generic.List<CheckItem> serverItems)
         {
-            if (_isEditing || _disposed || string.IsNullOrEmpty(_jsonPath)) return;
+            if (_isEditing || _disposed) return false;
+            if (serverItems.Count == Items.Count) return true;
 
-            int localCount = Items.Count;
-            Task.Run(() =>
+            foreach (var item in Items)
+                item.PropertyChanged -= Item_PropertyChanged;
+            Items.Clear();
+            foreach (var item in serverItems)
             {
-                try
-                {
-                    var serverItems = JsonDataService.Load(_jsonPath);
-                    _dispatcher.Invoke(() =>
-                    {
-                        if (_isEditing || _disposed) return;
-                        if (serverItems.Count == localCount) return;
-
-                        foreach (var item in Items)
-                            item.PropertyChanged -= Item_PropertyChanged;
-                        Items.Clear();
-                        foreach (var item in serverItems)
-                        {
-                            item.SetPhotosRootFolder(PhotosRootFolder);
-                            SubscribeItem(item);
-                            Items.Add(item);
-                        }
-                        ApplyFilter();
-                        ItemsView.Refresh();
-                    });
-                }
-                catch { }
-            });
+                item.SetPhotosRootFolder(PhotosRootFolder);
+                SubscribeItem(item);
+                Items.Add(item);
+            }
+            ApplyFilter();
+            ItemsView.Refresh();
+            return true;
         }
 
         private void SaveData()
@@ -344,6 +342,7 @@ namespace TNovUtils.Checklist.UI
             try
             {
                 JsonDataService.Save(_jsonPath, Items.ToList());
+                _poller?.MarkOwnWrite();
             }
             catch (Exception ex)
             {

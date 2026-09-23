@@ -4,7 +4,9 @@ using System.IO;
 using System.Linq;
 using System.Windows.Threading;
 using Autodesk.Revit.DB;
+using Newtonsoft.Json;
 using TNovCommon;
+using TNovCommon.Server;
 
 namespace TNovUtils.Checklist.Checks
 {
@@ -25,7 +27,7 @@ namespace TNovUtils.Checklist.Checks
         public const int RfCoordinationNumber = Report.ChecklistCatalog.RfCoordinationNumber;
 
         private readonly string _jsonPath;
-        private readonly DispatcherTimer _timer;
+        private readonly ServerFilePoller<List<AutoCheckItem>> _poller;
         private bool _busy;
         private bool _disposed;
         private List<AutoCheckItem> _items = new List<AutoCheckItem>();
@@ -42,14 +44,22 @@ namespace TNovUtils.Checklist.Checks
                 : LogsFolderFor(_jsonPath);
 
             if (!string.IsNullOrEmpty(LogsRootFolder))
-                Directory.CreateDirectory(LogsRootFolder);
+                ServerDirectories.Ensure(LogsRootFolder);
 
             Reload(DateTime.Now);
 
-            _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
-            _timer.Tick += (s, e) => Poll();
-            _timer.Start();
+            _poller = new ServerFilePoller<List<AutoCheckItem>>(
+                _jsonPath,
+                Dispatcher.CurrentDispatcher,
+                () => !_busy && !_disposed,
+                LoadRaw,
+                ApplyPolled,
+                "autocheck.json");
+            _poller.Start();
         }
+
+        /// <summary>Внеочередная проверка сервера (без блокировки UI).</summary>
+        public void CheckServerNow() => _poller.CheckNow();
 
         public AutoCheckItem Get(int number) =>
             _items.FirstOrDefault(i => i.Number == number);
@@ -99,7 +109,7 @@ namespace TNovUtils.Checklist.Checks
         {
             if (_disposed) return;
             _disposed = true;
-            _timer.Stop();
+            _poller.Dispose();
         }
 
         private AutoCheckItem GetOrCreate(int number)
@@ -137,7 +147,10 @@ namespace TNovUtils.Checklist.Checks
             try
             {
                 if (!string.IsNullOrEmpty(_jsonPath))
+                {
                     JsonDataService.SaveAuto(_jsonPath, _items);
+                    _poller?.MarkOwnWrite();
+                }
             }
             catch (Exception ex)
             {
@@ -145,30 +158,49 @@ namespace TNovUtils.Checklist.Checks
             }
         }
 
-        private void Poll()
+        /// <summary>
+        /// Фоновый поток: только чтение и разбор файла (без RevitAPI). null — файла нет.
+        /// Слияние с базовым списком — в <see cref="ApplyPolled"/> на UI-потоке.
+        /// </summary>
+        private List<AutoCheckItem> LoadRaw()
         {
-            if (_busy || _disposed || string.IsNullOrEmpty(_jsonPath)) return;
+            if (!File.Exists(_jsonPath)) return null;
+            string json = File.ReadAllText(_jsonPath);
+            return JsonConvert.DeserializeObject<List<AutoCheckItem>>(json);
+        }
+
+        /// <summary>
+        /// UI-поток: то же слияние, что в JsonDataService.LoadAuto (базовые пункты + ранее пройденные).
+        /// BaseItems ходит в RevitAPI — поэтому не из Task.Run.
+        /// </summary>
+        private static List<AutoCheckItem> MergeWithBase(List<AutoCheckItem> current, DateTime now)
+        {
+            List<AutoCheckItem> baseItems = new BaseItems().GetBaseItems(now);
+            if (current == null) return baseItems;
+
+            var result = new List<AutoCheckItem>();
+            foreach (var baseItem in baseItems)
+                result.Add(current.FirstOrDefault(c => c.Number == baseItem.Number) ?? baseItem);
+            return result;
+        }
+
+        /// <returns>false — окно занято прогоном, повторить на следующем тике.</returns>
+        private bool ApplyPolled(List<AutoCheckItem> raw)
+        {
+            if (_busy || _disposed) return false;
 
             var snapshot = _items
                 .Select(i => (i.Number, i.CreationDate, i.IsChecked, i.Title))
                 .ToList();
 
-            // LoadAuto ходит в RevitAPI — только с UI-потока, не из Task.Run.
-            try
-            {
-                var server = JsonDataService.LoadAuto(_jsonPath, DateTime.Now);
-                if (_busy || _disposed) return;
-                if (!HasMeaningfulChange(snapshot, server)) return;
+            var server = MergeWithBase(raw, DateTime.Now);
+            if (!HasMeaningfulChange(snapshot, server)) return true;
 
-                _items = server;
-                foreach (var item in _items)
-                    item.SetLogsRootFolder(LogsRootFolder);
-                Changed?.Invoke(this, EventArgs.Empty);
-            }
-            catch (Exception ex)
-            {
-                Logger.Log("Ошибка опроса autocheck.json: " + ex.Message, 2);
-            }
+            _items = server;
+            foreach (var item in _items)
+                item.SetLogsRootFolder(LogsRootFolder);
+            Changed?.Invoke(this, EventArgs.Empty);
+            return true;
         }
 
         private static bool HasMeaningfulChange(

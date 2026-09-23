@@ -38,6 +38,12 @@ namespace TNovUtils.Checklist.UI
             var registry = new CheckRegistry(_store, doc);
             _vm = new ChecklistWindowViewModel(registry, _bimStore, id => CreateView(id, registry, doc));
             DataContext = _vm;
+            // Опрос сервера — раз в 20 с; при возврате в окно проверяем сразу (в фоне, только отметку файла).
+            Activated += (s, e) =>
+            {
+                _store.CheckServerNow();
+                _bimStore.CheckServerNow();
+            };
             Closed += (s, e) =>
             {
                 Dispatcher.UnhandledException -= OnDispatcherUnhandledException;

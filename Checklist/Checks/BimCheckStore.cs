@@ -19,7 +19,7 @@ namespace TNovUtils.Checklist.Checks
     {
         private readonly string _jsonPath;
         private readonly Dispatcher _dispatcher;
-        private readonly DispatcherTimer _timer;
+        private readonly ServerFilePoller<List<SavedState>> _poller;
         private bool _applying;
         private bool _busy;
         private bool _disposed;
@@ -47,16 +47,24 @@ namespace TNovUtils.Checklist.Checks
 
             ApplySaved(LoadSaved());
 
-            _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
-            _timer.Tick += (s, e) => Poll();
-            _timer.Start();
+            _poller = new ServerFilePoller<List<SavedState>>(
+                _jsonPath,
+                _dispatcher,
+                () => !_busy && !_disposed,
+                () => LoadSaved(throwOnError: true),
+                ApplyPolled,
+                "BIM проверки.json");
+            _poller.Start();
         }
+
+        /// <summary>Внеочередная проверка сервера (без блокировки UI).</summary>
+        public void CheckServerNow() => _poller.CheckNow();
 
         public void Dispose()
         {
             if (_disposed) return;
             _disposed = true;
-            _timer.Stop();
+            _poller.Dispose();
             foreach (var item in Items)
                 item.PropertyChanged -= Item_PropertyChanged;
         }
@@ -107,7 +115,11 @@ namespace TNovUtils.Checklist.Checks
             }
         }
 
-        private List<SavedState> LoadSaved()
+        /// <param name="throwOnError">
+        /// true — для опроса: при занятом/битом файле бросаем исключение, чтобы опрос не запомнил
+        /// отметку файла и перечитал его на следующем тике (а не принял пустой список).
+        /// </param>
+        private List<SavedState> LoadSaved(bool throwOnError = false)
         {
             if (string.IsNullOrEmpty(_jsonPath) || !File.Exists(_jsonPath))
                 return new List<SavedState>();
@@ -125,10 +137,13 @@ namespace TNovUtils.Checklist.Checks
                     }
                     catch
                     {
+                        if (throwOnError) throw;
                         return new List<SavedState>();
                     }
             }
 
+            if (throwOnError)
+                throw new IOException($"Не удалось прочитать файл {_jsonPath} после трёх попыток.");
             return new List<SavedState>();
         }
 
@@ -155,6 +170,7 @@ namespace TNovUtils.Checklist.Checks
                     try
                     {
                         File.WriteAllText(_jsonPath, json);
+                        _poller?.MarkOwnWrite();
                         return;
                     }
                     catch (IOException)
@@ -170,29 +186,19 @@ namespace TNovUtils.Checklist.Checks
             }
         }
 
-        private void Poll()
+        /// <summary>UI-поток: результат фонового чтения (LoadSaved). false — занято, повторить позже.</summary>
+        private bool ApplyPolled(List<SavedState> server)
         {
-            if (_busy || _disposed || string.IsNullOrEmpty(_jsonPath)) return;
+            if (_busy || _disposed) return false;
 
             var snapshot = Items
                 .Select(i => (i.Id, i.IsChecked, i.LastChangedAt, i.LastChangedBy, i.Comment))
                 .ToList();
+            if (!HasMeaningfulChange(snapshot, server)) return true;
 
-            Task.Run(() =>
-            {
-                try
-                {
-                    var server = LoadSaved();
-                    _dispatcher.Invoke(() =>
-                    {
-                        if (_busy || _disposed) return;
-                        if (!HasMeaningfulChange(snapshot, server)) return;
-                        ApplySaved(server);
-                        Changed?.Invoke(this, EventArgs.Empty);
-                    });
-                }
-                catch { /* опрос не должен ронять окно */ }
-            });
+            ApplySaved(server);
+            Changed?.Invoke(this, EventArgs.Empty);
+            return true;
         }
 
         private static bool HasMeaningfulChange(

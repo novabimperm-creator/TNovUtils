@@ -5,6 +5,7 @@ using System.Linq;
 using Autodesk.Revit.DB;
 using Newtonsoft.Json;
 using TNovCommon;
+using TNovCommon.Server;
 using TNovUtils.Checklist.Checks;
 
 namespace TNovUtils.Checklist.Batch
@@ -33,10 +34,10 @@ namespace TNovUtils.Checklist.Batch
             if (string.IsNullOrWhiteSpace(modelName)) throw new ArgumentException("Пустое имя модели", nameof(modelName));
             if (string.IsNullOrWhiteSpace(projectsFolder)) throw new ArgumentException("Не задана папка projects", nameof(projectsFolder));
 
-            Directory.CreateDirectory(projectsFolder);
+            ServerDirectories.Ensure(projectsFolder);
             string jsonPath = Path.Combine(projectsFolder, $"{modelName},autocheck.json");
             string logsFolder = AutoCheckStore.LogsFolderFor(jsonPath);
-            Directory.CreateDirectory(logsFolder);
+            ServerDirectories.Ensure(logsFolder);
 
             // Читаем напрямую: JsonDataService.LoadAuto требует RevitAPI.UiApplication.
             List<AutoCheckItem> items = File.Exists(jsonPath)

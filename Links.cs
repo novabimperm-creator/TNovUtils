@@ -130,7 +130,7 @@ namespace TNovUtils
             List<string> modelPaths = new List<string>();
 
             List<Node> allNodes = GetAllNodes(viewModel.Nodes).ToList();
-            string RSfilePath = File.ReadAllText(config.ServerPath + "RSpath.txt");
+            string RSfilePath = TNovCommon.Server.ServerData.ReadAllText("RSpath.txt");
             foreach (var node in allNodes)
             {
                 if (node.IsChecked && node.IsModel && node.IsLocked==false) 

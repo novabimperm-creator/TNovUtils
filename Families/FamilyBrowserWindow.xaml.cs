@@ -119,32 +119,12 @@ namespace TNovUtils
             }
         }
 
+        // Раньше вызывал UpdateOrCreateItem на каждый .rfa (чтение+запись всего families_cache.json
+        // на каждый файл, O(N²) и гонки записи из Parallel.ForEach). Теперь — тот же проход,
+        // что и у кнопки «Обновить»: кэш загружается один раз, обновляется в памяти, сохраняется один раз.
         private void RefreshCacheInternal(string rootPath)
         {
-            var familyFolders = Directory.GetDirectories(rootPath, "*_Семейства*", SearchOption.TopDirectoryOnly);
-
-            Parallel.ForEach(familyFolders, folder =>
-            {
-                string category = Path.GetFileName(folder);
-                var rfaFiles = SafeGetAllRfaFiles(folder);
-                foreach (string file in rfaFiles)
-                {
-                    try
-                    {
-                        string fileName = Path.GetFileNameWithoutExtension(file);
-                        if (fileName.Contains("000"))
-                            continue;
-
-                        FileInfo fi = new FileInfo(file);
-                        DateTime lastModified = fi.LastWriteTime;
-                        FamilyCacheManager.UpdateOrCreateItem(file, category, lastModified);
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"Пропущен файл {file}: {ex.Message}");
-                    }
-                }
-            });
+            ScanAndUpdateCache(rootPath);
         }
         private List<FamilyInfo> ScanAndUpdateCache(string rootPath)
         {
@@ -174,26 +154,8 @@ namespace TNovUtils
                         FileInfo fi = new FileInfo(file);
                         DateTime lastModified = fi.LastWriteTime;
 
-                        // Добавляем или обновляем запись в кэше
-                        var item = cacheDict.GetOrAdd(file, key => new FamilyCacheItem
-                        {
-                            FullPath = key,
-                            Name = Path.GetFileNameWithoutExtension(key),
-                            Category = category,
-                            VersionNumber = 0,
-                            VersionString = "v0"
-                        });
-
-                        lock (item) // синхронизация изменения конкретного элемента, если нужно
-                        {
-                            if (item.LastModified != lastModified)
-                            {
-                                item.LastModified = lastModified;
-                                item.VersionNumber++;
-                                item.VersionString = $"v{item.VersionNumber}";
-                            }
-                            item.Category = category; // на случай, если категория изменилась
-                        }
+                        // Добавляем или обновляем запись в кэше (в памяти, потокобезопасно)
+                        var item = FamilyCacheManager.ApplyScannedFile(cacheDict, file, category, lastModified);
 
                         // Добавляем FamilyInfo для UI
                         result.Add(new FamilyInfo
