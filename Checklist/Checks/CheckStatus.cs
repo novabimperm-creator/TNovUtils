@@ -13,7 +13,7 @@ namespace TNovUtils.Checklist.Checks
 
     public static class CheckStatusRules
     {
-        public const int StaleCalendarDays = 7;
+        public const int StaleCalendarDays = Report.ChecklistCatalog.AutoStaleCalendarDays;
 
         public static CheckStatus FromItem(AutoCheckItem item)
         {

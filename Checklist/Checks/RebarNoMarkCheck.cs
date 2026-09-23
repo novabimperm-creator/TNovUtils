@@ -12,7 +12,7 @@ namespace TNovUtils.Checklist.Checks
     public sealed class RebarNoMarkCheck : ObservableObject, ICheck
     {
         public const string CheckId = "rebar-no-mark";
-        public const string DisplayTitle = "Арматура без марки";
+        public const string DisplayTitle = Report.ChecklistCatalog.RebarNoMarkTitle;
         public const string ResultTitle = "У арматуры заполнена марка конструкции";
 
         private readonly AutoCheckStore _store;

@@ -12,7 +12,7 @@ namespace TNovUtils.Checklist.Checks
     public sealed class NoPartsCheck : ObservableObject, ICheck
     {
         public const string CheckId = "no-parts";
-        public const string DisplayTitle = "Отсутствуют элементы категории Части";
+        public const string DisplayTitle = Report.ChecklistCatalog.NoPartsTitle;
         public const string ResultTitle = "Отсутствуют элементы категории Части";
 
         private readonly AutoCheckStore _store;

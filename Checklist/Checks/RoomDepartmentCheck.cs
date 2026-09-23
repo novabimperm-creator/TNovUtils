@@ -13,7 +13,7 @@ namespace TNovUtils.Checklist.Checks
     public sealed class RoomDepartmentCheck : ObservableObject, ICheck
     {
         public const string CheckId = "room-department";
-        public const string DisplayTitle = "Заполненность Назначения помещений";
+        public const string DisplayTitle = Report.ChecklistCatalog.RoomDepartmentTitle;
         public const string ResultTitle = "У всех помещений заполнено Назначение";
 
         private readonly AutoCheckStore _store;

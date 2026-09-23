@@ -13,14 +13,16 @@ namespace TNovUtils.Checklist.Checks
     /// </summary>
     public sealed class AutoCheckStore : IDisposable
     {
-        public const int GridsLevelsLinksNumber = 1;
-        public const int AntiMirrorNumber = 2;
-        public const int RebarNoMarkNumber = 3;
-        public const int NoPartsNumber = 4;
-        public const int LintelsNoMarkNumber = 5;
-        public const int EvacuationRoutesNumber = 6;
-        public const int UnplacedRoomsNumber = 7;
-        public const int RoomDepartmentNumber = 8;
+        public const int GridsLevelsLinksNumber = Report.ChecklistCatalog.GridsLevelsLinksNumber;
+        public const int AntiMirrorNumber = Report.ChecklistCatalog.AntiMirrorNumber;
+        public const int RebarNoMarkNumber = Report.ChecklistCatalog.RebarNoMarkNumber;
+        public const int NoPartsNumber = Report.ChecklistCatalog.NoPartsNumber;
+        public const int LintelsNoMarkNumber = Report.ChecklistCatalog.LintelsNoMarkNumber;
+        public const int EvacuationRoutesNumber = Report.ChecklistCatalog.EvacuationRoutesNumber;
+        public const int UnplacedRoomsNumber = Report.ChecklistCatalog.UnplacedRoomsNumber;
+        public const int RoomDepartmentNumber = Report.ChecklistCatalog.RoomDepartmentNumber;
+        public const int AdskPostcheckNumber = Report.ChecklistCatalog.AdskPostcheckNumber;
+        public const int RfCoordinationNumber = Report.ChecklistCatalog.RfCoordinationNumber;
 
         private readonly string _jsonPath;
         private readonly DispatcherTimer _timer;
@@ -37,8 +39,7 @@ namespace TNovUtils.Checklist.Checks
             _jsonPath = JsonDataService.GetJsonPath(doc, "autocheck");
             LogsRootFolder = string.IsNullOrEmpty(_jsonPath)
                 ? null
-                : Path.Combine(Path.GetDirectoryName(_jsonPath),
-                    Path.GetFileNameWithoutExtension(_jsonPath) + "_checklogs");
+                : LogsFolderFor(_jsonPath);
 
             if (!string.IsNullOrEmpty(LogsRootFolder))
                 Directory.CreateDirectory(LogsRootFolder);
@@ -70,17 +71,27 @@ namespace TNovUtils.Checklist.Checks
 
         private void ApplyRunCore(int number, CheckRunResult result, string userName)
         {
-            var item = GetOrCreate(number);
+            ApplyResult(GetOrCreate(number), result, userName, LogsRootFolder);
+        }
+
+        /// <summary>Записывает результат прогона в пункт и лог {n}.txt. Общее с AutoCheckBatchRunner.</summary>
+        internal static void ApplyResult(AutoCheckItem item, CheckRunResult result, string userName, string logsRootFolder)
+        {
             item.Title = result.Title;
             item.IsChecked = result.Passed;
             item.ElemIds = result.ElemIds ?? "";
             item.Creator = userName;
             item.CreationDate = DateTime.Now;
-            item.SetLogsRootFolder(LogsRootFolder);
+            item.SetLogsRootFolder(logsRootFolder);
 
             if (!string.IsNullOrEmpty(item.LogFullPath))
                 File.WriteAllText(item.LogFullPath + ".txt", result.Log ?? "");
         }
+
+        /// <summary>Папка логов рядом с {docName},autocheck.json.</summary>
+        internal static string LogsFolderFor(string jsonPath) =>
+            Path.Combine(Path.GetDirectoryName(jsonPath),
+                Path.GetFileNameWithoutExtension(jsonPath) + "_checklogs");
 
         public void SetBusy(bool busy) => _busy = busy;
 

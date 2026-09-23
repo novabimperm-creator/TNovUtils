@@ -12,7 +12,7 @@ namespace TNovUtils.Checklist.Checks
     public sealed class AntiMirrorCheck : ObservableObject, ICheck
     {
         public const string CheckId = "anti-mirror";
-        public const string DisplayTitle = "Антизеркало";
+        public const string DisplayTitle = Report.ChecklistCatalog.AntiMirrorTitle;
         public const string ResultTitle = "Окна и двери не отзеркалены";
 
         private readonly AutoCheckStore _store;

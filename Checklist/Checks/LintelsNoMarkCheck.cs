@@ -12,7 +12,7 @@ namespace TNovUtils.Checklist.Checks
     public sealed class LintelsNoMarkCheck : ObservableObject, ICheck
     {
         public const string CheckId = "lintels-no-mark";
-        public const string DisplayTitle = "Перемычки без марки";
+        public const string DisplayTitle = Report.ChecklistCatalog.LintelsNoMarkTitle;
         public const string ResultTitle = "У перемычек заполнена марка изделия";
 
         private readonly AutoCheckStore _store;

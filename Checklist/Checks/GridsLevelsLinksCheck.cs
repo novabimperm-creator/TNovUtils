@@ -12,7 +12,7 @@ namespace TNovUtils.Checklist.Checks
     public sealed class GridsLevelsLinksCheck : ObservableObject, ICheck
     {
         public const string CheckId = "grids-levels-links";
-        public const string DisplayTitle = "Оси, уровни, связи";
+        public const string DisplayTitle = Report.ChecklistCatalog.GridsLevelsLinksTitle;
         public const string ResultTitle = "Оси, уровни и связи закреплены, помещены в свои наборы";
 
         private readonly AutoCheckStore _store;

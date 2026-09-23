@@ -11,7 +11,7 @@ namespace TNovUtils
     {
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
-            UIApplication uiApp = RevitAPI.UiApplication;
+            UIApplication uiApp = commandData.Application;
             
             RevitCommandId id_built_in = RevitCommandId.LookupPostableCommandId(PostableCommand.Paint);
             uiApp.PostCommand(id_built_in);

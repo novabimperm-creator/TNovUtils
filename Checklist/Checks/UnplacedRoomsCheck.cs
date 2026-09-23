@@ -13,7 +13,7 @@ namespace TNovUtils.Checklist.Checks
     public sealed class UnplacedRoomsCheck : ObservableObject, ICheck
     {
         public const string CheckId = "unplaced-rooms";
-        public const string DisplayTitle = "Неразмещенные помещения";
+        public const string DisplayTitle = Report.ChecklistCatalog.UnplacedRoomsTitle;
         public const string ResultTitle = "Нет неразмещенных и избыточных помещений";
 
         private readonly AutoCheckStore _store;

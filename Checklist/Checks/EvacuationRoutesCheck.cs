@@ -10,7 +10,7 @@ namespace TNovUtils.Checklist.Checks
     public sealed class EvacuationRoutesCheck : ObservableObject, ICheck
     {
         public const string CheckId = "evacuation-routes";
-        public const string DisplayTitle = "Смоделированы пути эвакуации";
+        public const string DisplayTitle = Report.ChecklistCatalog.EvacuationRoutesTitle;
         public const string ResultTitle = "Смоделированы пути эвакуации";
 
         private readonly AutoCheckStore _store;

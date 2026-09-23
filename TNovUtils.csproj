@@ -19,6 +19,12 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
   </ItemGroup>
 
+  <!-- Отчет по чек-листам (Checklist\Report): выгрузка .xlsx без установленного Excel.
+       Версия — как в TNovVent: обе сборки кладут зависимости в общую папку build. -->
+  <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.104.2" />
+  </ItemGroup>
+
   <!-- Issues (TNovPRO): DPAPI для хранения refresh-токена. На net48 ProtectedData
        живёт в System.Security; на .NET 10 — только из NuGet-пакета. -->
   <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
