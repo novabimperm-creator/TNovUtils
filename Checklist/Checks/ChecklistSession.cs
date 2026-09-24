@@ -28,7 +28,7 @@ namespace TNovUtils.Checklist.Checks
 
         /// <summary>Интервал опроса: API дешёвый (304 без тела) — чаще, SMB — как раньше, раз в 20 с.</summary>
         public TimeSpan PollInterval =>
-            Store is ApiDocumentStore ? TimeSpan.FromSeconds(10) : TimeSpan.FromSeconds(20);
+            Store is IApiDocumentStore ? TimeSpan.FromSeconds(10) : TimeSpan.FromSeconds(20);
 
         /// <summary>Внеочередная проверка сервера всеми разделами (активация окна).</summary>
         public event EventHandler CheckNowRequested;

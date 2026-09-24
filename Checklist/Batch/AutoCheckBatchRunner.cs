@@ -119,7 +119,7 @@ namespace TNovUtils.Checklist.Batch
         {
             TNovConfig config = TNovConfigLoad.GetCachedConfig();
             IDocumentStore store = config != null ? DocumentStores.ForChecklist(config) : null;
-            if (store is ApiDocumentStore) return store;
+            if (store is IApiDocumentStore) return store;
 
             string serverPath = Path.GetDirectoryName(projectsFolder.TrimEnd('\\', '/'));
             return new FileDocumentStore(serverPath.EndsWith("\\") ? serverPath : serverPath + "\\");
