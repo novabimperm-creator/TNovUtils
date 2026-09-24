@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using Newtonsoft.Json;
 
 namespace TNovUtils.Checklist.Report
@@ -17,17 +16,25 @@ namespace TNovUtils.Checklist.Report
     }
 
     /// <summary>
-    /// Собирает отчёт из файлов на сервере, не открывая модели и не трогая Revit API —
-    /// поэтому безопасно вызывать из фонового потока.
+    /// Собирает отчёт из данных на сервере, не открывая модели и не трогая Revit API —
+    /// поэтому безопасно вызывать из фонового потока. Журнал синхронизаций, roles.txt и CDE.txt —
+    /// файлы шары; JSON Чек-листа — из <see cref="IChecklistDataSource"/> (файлы или TNovApi).
     /// </summary>
     public static class ModelReportBuilder
     {
         public const int PeriodDays = 7;
 
-        public static ReportResult Build(string serverPath)
+        public const string SourceUnavailableWarning = "Сервер TNov недоступен — данные чек-листов не загружены";
+
+        public static ReportResult Build(string serverPath) => Build(serverPath, null);
+
+        /// <param name="source">null — файлы на шаре, как раньше.</param>
+        /// <param name="periodDays">Период журнала синхронизаций (для сверок; в UI — <see cref="PeriodDays"/>).</param>
+        public static ReportResult Build(string serverPath, IChecklistDataSource source, int periodDays = PeriodDays)
         {
             var now = DateTime.Now;
-            var result = new ReportResult { BuiltAt = now, Since = now.AddDays(-PeriodDays) };
+            var result = new ReportResult { BuiltAt = now, Since = now.AddDays(-periodDays) };
+            source = source ?? new FileChecklistSource(serverPath);
 
             string projects = Path.Combine(serverPath, "projects");
             var roles = new RolesReader(Path.Combine(serverPath, "roles.txt"));
@@ -37,6 +44,17 @@ namespace TNovUtils.Checklist.Report
 
             var models = SyncJournalReader.Read(projects, result.Since, roles, result.Warnings);
 
+            // После переезда на API файлы расходятся с данными — к ним не откатываемся, а предупреждаем.
+            string unavailable = null;
+            try
+            {
+                source.Prepare(models.Select(m => m.ModelName).ToList());
+            }
+            catch (ChecklistSourceUnavailableException ex)
+            {
+                unavailable = ex.Message;
+                result.Warnings.Insert(0, SourceUnavailableWarning + " (" + ex.Message + ").");
+            }
 
             foreach (var sync in models.OrderByDescending(m => m.LastNonBimSync))
             {
@@ -47,21 +65,25 @@ namespace TNovUtils.Checklist.Report
                     LastUser = sync.LastNonBimUser,
                     SyncCount = sync.NonBimSyncCount
                 };
-                row.Auto = BuildAuto(projects, sync);
-                row.Bim = BuildBim(projects, sync);
+                row.Auto = unavailable != null ? Unavailable(unavailable) : BuildAuto(source, sync);
+                row.Bim = unavailable != null ? Unavailable(unavailable) : BuildBim(source, sync);
                 row.Nwc = BuildNwc(cde, sync);
                 result.Rows.Add(row);
             }
             return result;
         }
 
-        private static ChecksSummary BuildAuto(string projects, ModelSyncInfo sync)
+        /// <summary>Данных нет не по вине модели — н/д, а не «высокий риск».</summary>
+        private static ChecksSummary Unavailable(string reason) =>
+            new ChecksSummary { Error = reason, Level = ReportLevel.NA };
+
+        private static ChecksSummary BuildAuto(IChecklistDataSource source, ModelSyncInfo sync)
         {
             var summary = new ChecksSummary();
             List<SavedAutoCheck> saved;
             try
             {
-                saved = ReadJson<List<SavedAutoCheck>>(JsonPath(projects, sync.ModelName, "autocheck"))
+                saved = ReadJson<List<SavedAutoCheck>>(source, ChecklistDocumentKinds.AutoCheck, sync.ModelName)
                         ?? new List<SavedAutoCheck>();
             }
             catch (Exception ex)
@@ -88,13 +110,13 @@ namespace TNovUtils.Checklist.Report
             return summary;
         }
 
-        private static ChecksSummary BuildBim(string projects, ModelSyncInfo sync)
+        private static ChecksSummary BuildBim(IChecklistDataSource source, ModelSyncInfo sync)
         {
             var summary = new ChecksSummary();
             List<SavedBimCheck> saved;
             try
             {
-                saved = ReadJson<List<SavedBimCheck>>(JsonPath(projects, sync.ModelName, "BIM проверки"))
+                saved = ReadJson<List<SavedBimCheck>>(source, ChecklistDocumentKinds.BimCheck, sync.ModelName)
                         ?? new List<SavedBimCheck>();
             }
             catch (Exception ex)
@@ -186,25 +208,10 @@ namespace TNovUtils.Checklist.Report
             return name + ".nwc";
         }
 
-        /// <summary>Путь — как в JsonDataService.GetJsonPath: {docName},{name}.json.</summary>
-        private static string JsonPath(string projects, string modelName, string name) =>
-            Path.Combine(projects, $"{modelName},{name}.json");
-
-        private static T ReadJson<T>(string path) where T : class
+        private static T ReadJson<T>(IChecklistDataSource source, string kind, string modelName) where T : class
         {
-            if (!File.Exists(path)) return null;
-            for (int attempt = 0; ; attempt++)
-            {
-                try
-                {
-                    return JsonConvert.DeserializeObject<T>(File.ReadAllText(path));
-                }
-                catch (IOException) when (attempt < 2)
-                {
-                    // Файл может быть занят окном Чек-листа у пользователя — как в JsonDataService.
-                    Thread.Sleep(300);
-                }
-            }
+            string json = source.ReadJson(kind, modelName);
+            return json == null ? null : JsonConvert.DeserializeObject<T>(json);
         }
     }
 }

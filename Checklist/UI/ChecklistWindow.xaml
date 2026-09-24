@@ -103,12 +103,41 @@
             </Border>
 
             <Grid x:Name="ContentHost" Grid.Row="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="220"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <Border Grid.Column="0"
+                <!-- Состояние связи с сервером: загрузка / только просмотр -->
+                <Border Grid.Row="0"
+                        Grid.ColumnSpan="2"
+                        Style="{StaticResource ChangeCardStyle}"
+                        Margin="0,0,0,8"
+                        Visibility="{Binding Session.OfflineVisibility}">
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse Width="10" Height="10"
+                                 Fill="#E05A5A"
+                                 Margin="0,0,10,0"
+                                 VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding Session.StatusText}"
+                                   Style="{StaticResource JournalModuleStyle}"
+                                   Foreground="#E05A5A"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+                <TextBlock Grid.Row="0"
+                           Grid.ColumnSpan="2"
+                           Text="{Binding Session.StatusText}"
+                           Style="{StaticResource JournalDateStyle}"
+                           Margin="4,0,0,8"
+                           Visibility="{Binding Session.LoadingVisibility}"/>
+
+                <Border Grid.Row="1"
+                        Grid.Column="0"
                         Style="{StaticResource PanelFrameStyle}"
                         Margin="0,0,8,0"
                         Padding="8">
@@ -133,7 +162,8 @@
                     </ItemsControl>
                 </Border>
 
-                <Border Grid.Column="1"
+                <Border Grid.Row="1"
+                        Grid.Column="1"
                         Style="{StaticResource PanelFrameStyle}"
                         Padding="0">
                     <ContentControl Content="{Binding CurrentContent}"

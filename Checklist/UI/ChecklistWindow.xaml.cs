@@ -13,6 +13,7 @@ namespace TNovUtils.Checklist.UI
 {
     public partial class ChecklistWindow : Window
     {
+        private readonly ChecklistSession _session;
         private readonly AutoCheckStore _store;
         private readonly BimCheckStore _bimStore;
         private readonly ChecklistWindowViewModel _vm;
@@ -33,17 +34,16 @@ namespace TNovUtils.Checklist.UI
             var doc = uidoc.Document;
             SubTitle.Text = doc.Title;
 
-            _store = new AutoCheckStore(doc);
-            _bimStore = new BimCheckStore(doc);
+            // Хранилище и ключ модели — здесь (UI-поток, без сети); данные грузятся в фоне,
+            // окно показывается сразу с плашкой «Загрузка…».
+            _session = ChecklistSession.ForDocument(doc);
+            _store = new AutoCheckStore(doc, _session);
+            _bimStore = new BimCheckStore(doc, _session);
             var registry = new CheckRegistry(_store, doc);
-            _vm = new ChecklistWindowViewModel(registry, _bimStore, id => CreateView(id, registry, doc));
+            _vm = new ChecklistWindowViewModel(registry, _bimStore, _session, id => CreateView(id, registry, doc));
             DataContext = _vm;
-            // Опрос сервера — раз в 20 с; при возврате в окно проверяем сразу (в фоне, только отметку файла).
-            Activated += (s, e) =>
-            {
-                _store.CheckServerNow();
-                _bimStore.CheckServerNow();
-            };
+            // Опрос сервера — раз в 20 с (файлы) или 10 с (API); при возврате в окно проверяем сразу, в фоне.
+            Activated += (s, e) => _session.CheckNow();
             Closed += (s, e) =>
             {
                 Dispatcher.UnhandledException -= OnDispatcherUnhandledException;
@@ -61,7 +61,7 @@ namespace TNovUtils.Checklist.UI
             try
             {
                 if (id == CheckRegistry.SummaryId)
-                    return new SummaryControl(registry, _store, _bimStore, _vm.Select, doc);
+                    return new SummaryControl(registry, _store, _bimStore, _vm.Select, _session);
 
                 if (id == CheckRegistry.BimChecksId)
                     return new BimChecksControl(_bimStore);

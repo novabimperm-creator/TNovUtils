@@ -22,7 +22,7 @@ namespace TNovUtils.Checklist.Report
 
         /// <summary>Короткая подпись для ячейки: «не пройд. 40% · устар. 20%».</summary>
         public string ShortText =>
-            Error != null ? "ошибка чтения"
+            Error != null ? (Level == ReportLevel.NA ? "нет данных" : "ошибка чтения")
             : Total == 0 ? "нет проверок"
             : $"не пройд. {FailedPct:0}% · устар. {StalePct:0}%";
 

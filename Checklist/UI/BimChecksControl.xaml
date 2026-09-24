@@ -45,6 +45,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                          IsEnabled="{Binding DataContext.Store.CanEdit, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                           Style="{StaticResource DarkCheckBoxStyle}"
                                           VerticalAlignment="Center"
                                           Margin="0,0,10,0">
@@ -68,6 +69,7 @@
                                         Content="Комментарии"
                                         Command="{Binding DataContext.EditCommentCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                         CommandParameter="{Binding}"
+                                        IsEnabled="{Binding DataContext.Store.CanEdit, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                         Style="{StaticResource SecondaryButtonStyle}"
                                         Padding="10,6"
                                         Margin="8,0,0,0"

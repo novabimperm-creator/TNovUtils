@@ -1,25 +1,25 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.IO;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Threading;
 using Autodesk.Revit.DB;
 using Newtonsoft.Json;
 using TNovCommon;
+using TNovCommon.Storage;
 
 namespace TNovUtils.Checklist.Checks
 {
     /// <summary>
-    /// JSON BIM-проверок: {docName},BIM проверки.json рядом с autocheck/checklist.
+    /// JSON BIM-проверок: {docName},BIM проверки.json рядом с autocheck/checklist (или документ bimcheck в TNovApi).
     /// </summary>
-    public sealed class BimCheckStore : IDisposable
+    public sealed class BimCheckStore : ObservableObject, IDisposable
     {
-        private readonly string _jsonPath;
-        private readonly Dispatcher _dispatcher;
-        private readonly ServerFilePoller<List<SavedState>> _poller;
+        private static readonly JsonSerializerSettings SaveSettings = new JsonSerializerSettings { Formatting = Formatting.Indented };
+
+        private readonly ChecklistSession _session;
+        private readonly SharedDocument<List<SavedState>> _doc;
+        private readonly IReadOnlyList<string> _visibleIds;
         private bool _applying;
         private bool _busy;
         private bool _disposed;
@@ -33,38 +33,35 @@ namespace TNovUtils.Checklist.Checks
         public int TotalCount => Items.Count;
         public string CountText => $"{PassedCount}/{TotalCount}";
 
-        public BimCheckStore(Document doc)
-        {
-            _dispatcher = Dispatcher.CurrentDispatcher;
-            _jsonPath = JsonDataService.GetJsonPath(doc, "BIM проверки");
+        /// <summary>Отметки и комментарии можно менять (сервер доступен, данные загружены).</summary>
+        public bool CanEdit => _doc.CanEdit;
 
+        public BimCheckStore(Document doc, ChecklistSession session)
+        {
+            _session = session;
             foreach (var item in BimCheckItem.Catalog())
             {
                 if (!item.IsVisibleFor(doc)) continue;
                 item.PropertyChanged += Item_PropertyChanged;
                 Items.Add(item);
             }
+            _visibleIds = Items.Select(i => i.Id).ToList();
 
-            ApplySaved(LoadSaved());
-
-            _poller = new ServerFilePoller<List<SavedState>>(
-                _jsonPath,
-                _dispatcher,
-                () => !_busy && !_disposed,
-                () => LoadSaved(throwOnError: true),
-                ApplyPolled,
-                "BIM проверки.json");
-            _poller.Start();
+            _doc = new SharedDocument<List<SavedState>>(
+                session, DocumentKinds.BimCheck, "BIM-проверки", Dispatcher.CurrentDispatcher,
+                Parse, Serialize, ApplyServer, () => _busy || _disposed);
+            _doc.CanEditChanged += (s, e) => OnPropertyChanged(nameof(CanEdit));
+            _doc.Start();
         }
 
         /// <summary>Внеочередная проверка сервера (без блокировки UI).</summary>
-        public void CheckServerNow() => _poller.CheckNow();
+        public void CheckServerNow() => _session.CheckNow();
 
         public void Dispose()
         {
             if (_disposed) return;
             _disposed = true;
-            _poller.Dispose();
+            _doc.Dispose();
             foreach (var item in Items)
                 item.PropertyChanged -= Item_PropertyChanged;
         }
@@ -90,7 +87,33 @@ namespace TNovUtils.Checklist.Checks
                 _applying = false;
             }
 
-            Save();
+            // Операция над свежей копией: только этот пункт, чужие отметки по другим пунктам не трогаем.
+            string id = item.Id;
+            bool isChecked = item.IsChecked;
+            DateTime at = item.LastChangedAt;
+            string by = item.LastChangedBy;
+            string comment = item.Comment ?? "";
+            bool commentChanged = e.PropertyName == nameof(BimCheckItem.Comment);
+
+            if (!_doc.Edit(states =>
+                {
+                    var state = states.FirstOrDefault(s => s.Id == id);
+                    if (state == null)
+                    {
+                        state = new SavedState { Id = id, Comment = "" };
+                        states.Add(state);
+                    }
+                    if (commentChanged) state.Comment = comment;
+                    else state.IsChecked = isChecked;
+                    state.CreatedAt = at;
+                    state.Creator = by;
+                    return true;
+                }))
+            {
+                // Правка сейчас невозможна (элементы и так заблокированы) — вернуть как на сервере.
+                _doc.Reload();
+            }
+
             Changed?.Invoke(this, EventArgs.Empty);
         }
 
@@ -115,90 +138,33 @@ namespace TNovUtils.Checklist.Checks
             }
         }
 
-        /// <param name="throwOnError">
-        /// true — для опроса: при занятом/битом файле бросаем исключение, чтобы опрос не запомнил
-        /// отметку файла и перечитал его на следующем тике (а не принял пустой список).
-        /// </param>
-        private List<SavedState> LoadSaved(bool throwOnError = false)
+        /// <summary>
+        /// Фон: разбор документа. Недостающие видимые пункты дописываются пустыми — как раньше
+        /// Save() писал весь список окна, так что формат файла не меняется.
+        /// </summary>
+        private List<SavedState> Parse(string json)
         {
-            if (string.IsNullOrEmpty(_jsonPath) || !File.Exists(_jsonPath))
-                return new List<SavedState>();
-
-            for (int i = 0; i < 3; i++)
-            {
-                try
-                {
-                    string json = File.ReadAllText(_jsonPath);
-                    return JsonConvert.DeserializeObject<List<SavedState>>(json) ?? new List<SavedState>();
-                }
-                    catch (IOException)
-                    {
-                        Thread.Sleep(300);
-                    }
-                    catch
-                    {
-                        if (throwOnError) throw;
-                        return new List<SavedState>();
-                    }
-            }
-
-            if (throwOnError)
-                throw new IOException($"Не удалось прочитать файл {_jsonPath} после трёх попыток.");
-            return new List<SavedState>();
+            var list = string.IsNullOrEmpty(json)
+                ? new List<SavedState>()
+                : JsonConvert.DeserializeObject<List<SavedState>>(json) ?? new List<SavedState>();
+            foreach (string id in _visibleIds)
+                if (!list.Any(s => s.Id == id))
+                    list.Add(new SavedState { Id = id, Comment = "" });
+            return list;
         }
 
-        private void Save()
+        private static string Serialize(List<SavedState> states) => JsonConvert.SerializeObject(states, SaveSettings);
+
+        /// <summary>UI-поток: документ с сервера (загрузка, опрос или итог своего сохранения).</summary>
+        private void ApplyServer(StoredDocument stored, List<SavedState> server)
         {
-            if (string.IsNullOrEmpty(_jsonPath)) return;
-
-            var payload = Items.Select(i => new SavedState
-            {
-                Id = i.Id,
-                IsChecked = i.IsChecked,
-                CreatedAt = i.LastChangedAt,
-                Creator = i.LastChangedBy,
-                Comment = i.Comment ?? ""
-            }).ToList();
-
-            var settings = new JsonSerializerSettings { Formatting = Formatting.Indented };
-            string json = JsonConvert.SerializeObject(payload, settings);
-
-            try
-            {
-                for (int i = 0; i < 3; i++)
-                {
-                    try
-                    {
-                        File.WriteAllText(_jsonPath, json);
-                        _poller?.MarkOwnWrite();
-                        return;
-                    }
-                    catch (IOException)
-                    {
-                        Thread.Sleep(300);
-                    }
-                }
-                throw new IOException($"Не удалось сохранить файл {_jsonPath} после трёх попыток.");
-            }
-            catch (Exception ex)
-            {
-                new InfoWindow280($"Не удалось сохранить BIM-проверки: {ex.Message}").ShowDialog();
-            }
-        }
-
-        /// <summary>UI-поток: результат фонового чтения (LoadSaved). false — занято, повторить позже.</summary>
-        private bool ApplyPolled(List<SavedState> server)
-        {
-            if (_busy || _disposed) return false;
-
             var snapshot = Items
                 .Select(i => (i.Id, i.IsChecked, i.LastChangedAt, i.LastChangedBy, i.Comment))
                 .ToList();
-            if (!HasMeaningfulChange(snapshot, server)) return true;
+            if (!HasMeaningfulChange(snapshot, server)) return;
 
             ApplySaved(server);
             Changed?.Invoke(this, EventArgs.Empty);
-            return true;
         }
 
         private static bool HasMeaningfulChange(

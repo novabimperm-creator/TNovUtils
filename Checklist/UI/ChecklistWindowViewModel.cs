@@ -58,9 +58,13 @@ namespace TNovUtils.Checklist.UI
             private set => SetProperty(ref _currentContent, value);
         }
 
-        public ChecklistWindowViewModel(CheckRegistry registry, BimCheckStore bimStore, Func<string, UserControl> createView)
+        /// <summary>Состояние связи для плашки «Загрузка…» / «Сервер TNov недоступен — только просмотр».</summary>
+        public ChecklistSession Session { get; }
+
+        public ChecklistWindowViewModel(CheckRegistry registry, BimCheckStore bimStore, ChecklistSession session, Func<string, UserControl> createView)
         {
             _createView = createView;
+            Session = session;
 
             NavItems.Add(new NavItem(CheckRegistry.SummaryId, CheckRegistry.SummaryTitle, isSummary: true));
 

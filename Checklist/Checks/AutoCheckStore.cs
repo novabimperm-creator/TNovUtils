@@ -1,17 +1,16 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Windows.Threading;
 using Autodesk.Revit.DB;
 using Newtonsoft.Json;
 using TNovCommon;
-using TNovCommon.Server;
+using TNovCommon.Storage;
 
 namespace TNovUtils.Checklist.Checks
 {
     /// <summary>
-    /// Общий JSON автопроверок с Журналом: {docName},autocheck.json.
+    /// Общий JSON автопроверок с Журналом: {docName},autocheck.json (или документ autocheck в TNovApi).
     /// </summary>
     public sealed class AutoCheckStore : IDisposable
     {
@@ -26,82 +25,112 @@ namespace TNovUtils.Checklist.Checks
         public const int AdskPostcheckNumber = Report.ChecklistCatalog.AdskPostcheckNumber;
         public const int RfCoordinationNumber = Report.ChecklistCatalog.RfCoordinationNumber;
 
-        private readonly string _jsonPath;
-        private readonly ServerFilePoller<List<AutoCheckItem>> _poller;
+        private static readonly JsonSerializerSettings SaveSettings = new JsonSerializerSettings { Formatting = Formatting.Indented };
+
+        private readonly ChecklistSession _session;
+        private readonly SharedDocument<List<AutoCheckItem>> _doc;
+        private readonly IReadOnlyList<int> _baseNumbers;
+        private readonly string _userName;
         private bool _busy;
         private bool _disposed;
         private List<AutoCheckItem> _items = new List<AutoCheckItem>();
 
         public string LogsRootFolder { get; }
 
+        public ChecklistAttachments Attachments => _session.Attachments;
+
+        /// <summary>Можно запускать проверки и сохранять результат (сервер доступен, данные загружены).</summary>
+        public bool CanEdit => _doc.CanEdit;
+
         public event EventHandler Changed;
 
-        public AutoCheckStore(Document doc)
+        public event EventHandler CanEditChanged;
+
+        public AutoCheckStore(Document doc, ChecklistSession session)
         {
-            _jsonPath = JsonDataService.GetJsonPath(doc, "autocheck");
-            LogsRootFolder = string.IsNullOrEmpty(_jsonPath)
-                ? null
-                : LogsFolderFor(_jsonPath);
+            _session = session;
+            LogsRootFolder = session.Attachments.LogsRoot;
 
-            if (!string.IsNullOrEmpty(LogsRootFolder))
-                ServerDirectories.Ensure(LogsRootFolder);
+            // Имя пользователя и номера базовых проверок — здесь, в UI-потоке: слияние идёт и в фоне.
+            _userName = RevitAPI.UiApplication?.Application?.Username ?? "";
+            _baseNumbers = new BaseItems().numbers.ToList();
 
-            Reload(DateTime.Now);
-
-            _poller = new ServerFilePoller<List<AutoCheckItem>>(
-                _jsonPath,
-                Dispatcher.CurrentDispatcher,
-                () => !_busy && !_disposed,
-                LoadRaw,
-                ApplyPolled,
-                "autocheck.json");
-            _poller.Start();
+            _doc = new SharedDocument<List<AutoCheckItem>>(
+                session, DocumentKinds.AutoCheck, "автопроверки", Dispatcher.CurrentDispatcher,
+                Parse, Serialize, ApplyServer, () => _busy || _disposed);
+            _doc.CanEditChanged += (s, e) => CanEditChanged?.Invoke(this, EventArgs.Empty);
+            _doc.Start();
         }
 
         /// <summary>Внеочередная проверка сервера (без блокировки UI).</summary>
-        public void CheckServerNow() => _poller.CheckNow();
+        public void CheckServerNow() => _session.CheckNow();
 
         public AutoCheckItem Get(int number) =>
             _items.FirstOrDefault(i => i.Number == number);
 
-        public void ApplyRun(int number, CheckRunResult result, string userName)
-        {
-            ApplyRunCore(number, result, userName);
-            Save();
-            Changed?.Invoke(this, EventArgs.Empty);
-        }
+        public void ApplyRun(int number, CheckRunResult result, string userName) =>
+            ApplyRuns(new[] { (number, result) }, userName);
 
+        /// <summary>
+        /// UI-поток: результат прогона сразу виден в окне; в фоне пишутся логи и тот же результат
+        /// применяется к свежей копии документа (чужие результаты по другим проверкам сохраняются).
+        /// </summary>
         public void ApplyRuns(IReadOnlyList<(int Number, CheckRunResult Result)> results, string userName)
         {
-            foreach (var r in results)
-                ApplyRunCore(r.Number, r.Result, userName);
-            Save();
+            if (!_doc.CanEdit)
+            {
+                new InfoWindow280(ChecklistSession.OfflineText + ".\nРезультат проверки не сохранён.").ShowDialog();
+                return;
+            }
+
+            DateTime at = DateTime.Now;
+            var runs = results.ToList();
+
+            foreach (var r in runs)
+                ApplyResult(GetOrCreate(r.Number), r.Result, userName, at);
             Changed?.Invoke(this, EventArgs.Empty);
+
+            var attachments = _session.Attachments;
+            _doc.Edit(
+                items =>
+                {
+                    foreach (var r in runs)
+                        ApplyResult(FindOrAdd(items, r.Number), r.Result, userName, at);
+                    return true;
+                },
+                before: async () =>
+                {
+                    // Лог — раньше документа: кто увидит новый результат, сразу откроет и его лог.
+                    foreach (var r in runs)
+                        await attachments.SaveLogAsync(r.Number, r.Result.Log, userName).ConfigureAwait(false);
+                });
         }
 
-        private void ApplyRunCore(int number, CheckRunResult result, string userName)
-        {
-            ApplyResult(GetOrCreate(number), result, userName, LogsRootFolder);
-        }
-
-        /// <summary>Записывает результат прогона в пункт и лог {n}.txt. Общее с AutoCheckBatchRunner.</summary>
-        internal static void ApplyResult(AutoCheckItem item, CheckRunResult result, string userName, string logsRootFolder)
+        /// <summary>Записывает результат прогона в пункт (лог пишется отдельно). Общее с AutoCheckBatchRunner.</summary>
+        internal static void ApplyResult(AutoCheckItem item, CheckRunResult result, string userName, DateTime at)
         {
             item.Title = result.Title;
             item.IsChecked = result.Passed;
             item.ElemIds = result.ElemIds ?? "";
             item.Creator = userName;
-            item.CreationDate = DateTime.Now;
-            item.SetLogsRootFolder(logsRootFolder);
-
-            if (!string.IsNullOrEmpty(item.LogFullPath))
-                File.WriteAllText(item.LogFullPath + ".txt", result.Log ?? "");
+            item.CreationDate = at;
         }
 
-        /// <summary>Папка логов рядом с {docName},autocheck.json.</summary>
-        internal static string LogsFolderFor(string jsonPath) =>
-            Path.Combine(Path.GetDirectoryName(jsonPath),
-                Path.GetFileNameWithoutExtension(jsonPath) + "_checklogs");
+        internal static AutoCheckItem FindOrAdd(List<AutoCheckItem> items, int number)
+        {
+            var item = items.FirstOrDefault(i => i.Number == number);
+            if (item != null) return item;
+            item = new AutoCheckItem { Number = number };
+            items.Add(item);
+            return item;
+        }
+
+        /// <summary>Разбор документа как есть (null — документа нет). Без RevitAPI.</summary>
+        internal static List<AutoCheckItem> ParseRaw(string json) =>
+            string.IsNullOrEmpty(json) ? null : JsonConvert.DeserializeObject<List<AutoCheckItem>>(json);
+
+        /// <summary>Тот же формат, что у прежнего JsonDataService.SaveAuto.</summary>
+        internal static string Serialize(List<AutoCheckItem> items) => JsonConvert.SerializeObject(items, SaveSettings);
 
         public void SetBusy(bool busy) => _busy = busy;
 
@@ -109,7 +138,7 @@ namespace TNovUtils.Checklist.Checks
         {
             if (_disposed) return;
             _disposed = true;
-            _poller.Dispose();
+            _doc.Dispose();
         }
 
         private AutoCheckItem GetOrCreate(int number)
@@ -123,84 +152,41 @@ namespace TNovUtils.Checklist.Checks
             return item;
         }
 
-        private void Reload(DateTime now)
-        {
-            try
-            {
-                _items = string.IsNullOrEmpty(_jsonPath)
-                    ? new List<AutoCheckItem>()
-                    : JsonDataService.LoadAuto(_jsonPath, now);
-
-                foreach (var item in _items)
-                    item.SetLogsRootFolder(LogsRootFolder);
-            }
-            catch (Exception ex)
-            {
-                Logger.Log("Не удалось загрузить автопроверки: " + ex.Message, 4);
-                new InfoWindow280($"Не удалось загрузить автопроверки: {ex.Message}").ShowDialog();
-                _items = new List<AutoCheckItem>();
-            }
-        }
-
-        private void Save()
-        {
-            try
-            {
-                if (!string.IsNullOrEmpty(_jsonPath))
-                {
-                    JsonDataService.SaveAuto(_jsonPath, _items);
-                    _poller?.MarkOwnWrite();
-                }
-            }
-            catch (Exception ex)
-            {
-                new InfoWindow280($"Не удалось сохранить автопроверки: {ex.Message}").ShowDialog();
-            }
-        }
-
         /// <summary>
-        /// Фоновый поток: только чтение и разбор файла (без RevitAPI). null — файла нет.
-        /// Слияние с базовым списком — в <see cref="ApplyPolled"/> на UI-потоке.
+        /// Фон: разбор + то же слияние, что было в JsonDataService.LoadAuto (базовые пункты +
+        /// ранее пройденные). Сохраняется тоже слитый список — как раньше SaveAuto(_items).
+        /// Имя пользователя взято в UI-потоке, поэтому RevitAPI здесь не нужен.
         /// </summary>
-        private List<AutoCheckItem> LoadRaw()
-        {
-            if (!File.Exists(_jsonPath)) return null;
-            string json = File.ReadAllText(_jsonPath);
-            return JsonConvert.DeserializeObject<List<AutoCheckItem>>(json);
-        }
+        private List<AutoCheckItem> Parse(string json) => MergeWithBase(ParseRaw(json), _baseNumbers, DateTime.Now, _userName);
 
-        /// <summary>
-        /// UI-поток: то же слияние, что в JsonDataService.LoadAuto (базовые пункты + ранее пройденные).
-        /// BaseItems ходит в RevitAPI — поэтому не из Task.Run.
-        /// </summary>
-        private static List<AutoCheckItem> MergeWithBase(List<AutoCheckItem> current, DateTime now)
+        private static List<AutoCheckItem> MergeWithBase(List<AutoCheckItem> current, IReadOnlyList<int> baseNumbers, DateTime now, string userName)
         {
-            List<AutoCheckItem> baseItems = new BaseItems().GetBaseItems(now);
-            if (current == null) return baseItems;
-
             var result = new List<AutoCheckItem>();
-            foreach (var baseItem in baseItems)
-                result.Add(current.FirstOrDefault(c => c.Number == baseItem.Number) ?? baseItem);
+            foreach (int number in baseNumbers)
+            {
+                result.Add(current?.FirstOrDefault(c => c.Number == number) ?? new AutoCheckItem
+                {
+                    Number = number,
+                    IsChecked = false,
+                    CreationDate = now,
+                    Creator = userName
+                });
+            }
             return result;
         }
 
-        /// <returns>false — окно занято прогоном, повторить на следующем тике.</returns>
-        private bool ApplyPolled(List<AutoCheckItem> raw)
+        /// <summary>UI-поток: документ с сервера (загрузка, опрос или итог своего сохранения).</summary>
+        private void ApplyServer(StoredDocument stored, List<AutoCheckItem> server)
         {
-            if (_busy || _disposed) return false;
-
             var snapshot = _items
                 .Select(i => (i.Number, i.CreationDate, i.IsChecked, i.Title))
                 .ToList();
-
-            var server = MergeWithBase(raw, DateTime.Now);
-            if (!HasMeaningfulChange(snapshot, server)) return true;
+            if (!HasMeaningfulChange(snapshot, server)) return;
 
             _items = server;
             foreach (var item in _items)
                 item.SetLogsRootFolder(LogsRootFolder);
             Changed?.Invoke(this, EventArgs.Empty);
-            return true;
         }
 
         private static bool HasMeaningfulChange(
@@ -215,6 +201,9 @@ namespace TNovUtils.Checklist.Checks
                 var ours = local.FirstOrDefault(i => i.Number == remote.Number);
                 if (ours.Number == 0 && remote.Number != 0)
                     return true;
+                // Заготовка (проверку не запускали) при слиянии меняет только дату — не в счёт.
+                if (string.IsNullOrWhiteSpace(ours.Title) && string.IsNullOrWhiteSpace(remote.Title))
+                    continue;
                 if (ours.CreationDate != remote.CreationDate ||
                     ours.IsChecked != remote.IsChecked ||
                     ours.Title != remote.Title)

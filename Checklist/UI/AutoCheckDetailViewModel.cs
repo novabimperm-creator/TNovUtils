@@ -65,7 +65,8 @@ namespace TNovUtils.Checklist.UI
                 throw;
             }
 
-            RunCommand = new RelayCommand2(_ => Run());
+            RunCommand = new RelayCommand2(_ => Run(), _ => _store.CanEdit);
+            _store.CanEditChanged += (s, e) => RunCommand.RaiseCanExecuteChanged();
             OpenLogCommand = new RelayCommand2(_ => OpenLog());
             SelectElemsCommand = new RelayCommand2(_ => SelectElems());
         }
@@ -125,18 +126,41 @@ namespace TNovUtils.Checklist.UI
 
         private void OpenLog()
         {
-            var item = _store.Get(_number);
-            if (item == null || string.IsNullOrEmpty(item.LogFullPath)) return;
-            try
+            var attachments = _store.Attachments;
+            int number = _number;
+            // Лог может лежать на шаре или на сервере (прогон на другой машине) — ищем/качаем в фоне.
+            System.Threading.Tasks.Task.Run(async () =>
             {
-                Logger.Log("Открытие лога проверки #" + _number + ": " + item.LogFullPath + ".txt", 2);
-                System.Diagnostics.Process.Start("notepad.exe", item.LogFullPath + ".txt");
-            }
-            catch (Exception ex)
-            {
-                Logger.Log("Не удалось открыть лог проверки #" + _number + ": " + ex.Message, 4);
-                new InfoWindow400($"Не удалось открыть файл: {ex.Message}").ShowDialog();
-            }
+                string path = null;
+                Exception error = null;
+                try { path = await attachments.EnsureLogAsync(number).ConfigureAwait(false); }
+                catch (Exception ex) { error = ex; }
+
+                _ = _dispatcher.BeginInvoke(new Action(() =>
+                {
+                    if (error != null)
+                    {
+                        Logger.Log("Не удалось получить лог проверки #" + number + ": " + error.Message, 4);
+                        new InfoWindow400($"Не удалось получить лог: {error.Message}").ShowDialog();
+                        return;
+                    }
+                    if (path == null)
+                    {
+                        new InfoWindow280("Лог этой проверки не найден.").ShowDialog();
+                        return;
+                    }
+                    try
+                    {
+                        Logger.Log("Открытие лога проверки #" + number + ": " + path, 2);
+                        System.Diagnostics.Process.Start("notepad.exe", "\"" + path + "\"");
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Log("Не удалось открыть лог проверки #" + number + ": " + ex.Message, 4);
+                        new InfoWindow400($"Не удалось открыть файл: {ex.Message}").ShowDialog();
+                    }
+                }));
+            });
         }
 
         private void SelectElems()

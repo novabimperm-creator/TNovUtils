@@ -27,6 +27,7 @@ namespace TNovUtils.Checklist.Report
         public static Action<string> ErrorLog { get; set; }
 
         private readonly Func<string> _serverPath;
+        private readonly Func<IChecklistDataSource> _source;
         private ReportResult _result;
 
         public event PropertyChangedEventHandler PropertyChanged;
@@ -61,9 +62,11 @@ namespace TNovUtils.Checklist.Report
         public ReportViewModel(string serverPath) : this(() => serverPath) { }
 
         /// <summary>Путь к серверу вычисляется при каждом обновлении (TNovDesktop читает конфиг).</summary>
-        public ReportViewModel(Func<string> serverPath)
+        /// <param name="source">Источник JSON Чек-листа, тоже при каждом обновлении; null — файлы шары.</param>
+        public ReportViewModel(Func<string> serverPath, Func<IChecklistDataSource> source = null)
         {
             _serverPath = serverPath;
+            _source = source;
             RefreshCommand = new DelegateCommand(() => _ = RefreshAsync(), () => !IsBusy);
             ExportCommand = new DelegateCommand(Export, () => !IsBusy && Rows.Count > 0);
         }
@@ -76,7 +79,8 @@ namespace TNovUtils.Checklist.Report
             try
             {
                 string server = _serverPath();
-                var result = await Task.Run(() => ModelReportBuilder.Build(server));
+                IChecklistDataSource source = _source?.Invoke();
+                var result = await Task.Run(() => ModelReportBuilder.Build(server, source));
                 Apply(result);
             }
             catch (Exception ex)

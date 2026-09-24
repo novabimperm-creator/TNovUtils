@@ -1,13 +1,13 @@
-using Autodesk.Revit.DB;
+using TNovUtils.Checklist.Checks;
 
 namespace TNovUtils.Checklist.UI
 {
     public partial class DesignerChecklistControl : System.Windows.Controls.UserControl
     {
-        public DesignerChecklistControl(Document doc)
+        public DesignerChecklistControl(ChecklistSession session)
         {
             InitializeComponent();
-            DataContext = new DesignerChecklistViewModel(doc);
+            DataContext = new DesignerChecklistViewModel(session);
         }
 
         public void StopPolling()

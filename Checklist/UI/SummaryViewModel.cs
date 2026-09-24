@@ -89,7 +89,8 @@ namespace TNovUtils.Checklist.UI
             RefreshBim();
             _bimStore.Changed += (s, e) => RefreshBim();
 
-            RunAllCommand = new RelayCommand2(_ => RunAll(), _ => !_isRunning);
+            RunAllCommand = new RelayCommand2(_ => RunAll(), _ => !_isRunning && _store.CanEdit);
+            _store.CanEditChanged += (s, e) => RunAllCommand.RaiseCanExecuteChanged();
         }
 
         private void RefreshBim()
