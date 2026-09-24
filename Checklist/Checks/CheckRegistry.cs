@@ -22,7 +22,8 @@ namespace TNovUtils.Checklist.Checks
             var checks = new List<ICheck>
             {
                 new GridsLevelsLinksCheck(store),
-                new RfCoordinationCheck(store)
+                new RfCoordinationCheck(store),
+                new DwgCurrentViewOnlyCheck(store)
             };
             if (ModelNameRules.IsArOrPof(doc))
                 checks.Add(new AntiMirrorCheck(store));
@@ -36,9 +37,13 @@ namespace TNovUtils.Checklist.Checks
                 checks.Add(new EvacuationRoutesCheck(store));
                 checks.Add(new UnplacedRoomsCheck(store));
                 checks.Add(new RoomDepartmentCheck(store));
+                checks.Add(new WetRoomsOverElectricalCheck(store));
             }
             if (ModelNameRules.IsVkOvModel(doc))
+            {
                 checks.Add(new AdskPostcheckCheck(store));
+                checks.Add(new PipeAccessoriesOverTraysCheck(store));
+            }
             Checks = checks;
         }
 
@@ -60,7 +65,8 @@ namespace TNovUtils.Checklist.Checks
             {
                 (AutoCheckStore.GridsLevelsLinksNumber, GridsLevelsLinksCheck.DisplayTitle, GridsLevelsLinksChecker.Run),
                 // Без UI набор РФ не открыть — только сообщаем
-                (AutoCheckStore.RfCoordinationNumber, RfCoordinationCheck.DisplayTitle, d => RfCoordinationChecker.Run(d, allowUi: false))
+                (AutoCheckStore.RfCoordinationNumber, RfCoordinationCheck.DisplayTitle, d => RfCoordinationChecker.Run(d, allowUi: false)),
+                (AutoCheckStore.DwgCurrentViewOnlyNumber, DwgCurrentViewOnlyCheck.DisplayTitle, DwgCurrentViewOnlyChecker.Run)
             };
             if (ModelNameRules.IsArOrPof(modelName))
                 list.Add((AutoCheckStore.AntiMirrorNumber, AntiMirrorCheck.DisplayTitle, AntiMirrorChecker.Run));
@@ -74,9 +80,15 @@ namespace TNovUtils.Checklist.Checks
                 list.Add((AutoCheckStore.EvacuationRoutesNumber, EvacuationRoutesCheck.DisplayTitle, EvacuationRoutesChecker.Run));
                 list.Add((AutoCheckStore.UnplacedRoomsNumber, UnplacedRoomsCheck.DisplayTitle, UnplacedRoomsChecker.Run));
                 list.Add((AutoCheckStore.RoomDepartmentNumber, RoomDepartmentCheck.DisplayTitle, RoomDepartmentChecker.Run));
+                list.Add((AutoCheckStore.WetRoomsOverElectricalNumber, WetRoomsOverElectricalCheck.DisplayTitle, WetRoomsOverElectricalChecker.Run));
             }
             if (ModelNameRules.IsVkOvModel(modelName))
+            {
                 list.Add((AutoCheckStore.AdskPostcheckNumber, AdskPostcheckCheck.DisplayTitle, AdskPostcheckChecker.Run));
+                // Связи в пакете не загружены — проверка исключена в AutoCheckBatchRunner
+                list.Add((AutoCheckStore.PipeAccessoriesOverTraysNumber, PipeAccessoriesOverTraysCheck.DisplayTitle,
+                    d => PipeAccessoriesOverTraysChecker.Run(d, allowUi: false)));
+            }
             return list;
         }
     }

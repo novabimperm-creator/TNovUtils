@@ -24,6 +24,9 @@ namespace TNovUtils.Checklist.Checks
         public const int RoomDepartmentNumber = Report.ChecklistCatalog.RoomDepartmentNumber;
         public const int AdskPostcheckNumber = Report.ChecklistCatalog.AdskPostcheckNumber;
         public const int RfCoordinationNumber = Report.ChecklistCatalog.RfCoordinationNumber;
+        public const int PipeAccessoriesOverTraysNumber = Report.ChecklistCatalog.PipeAccessoriesOverTraysNumber;
+        public const int WetRoomsOverElectricalNumber = Report.ChecklistCatalog.WetRoomsOverElectricalNumber;
+        public const int DwgCurrentViewOnlyNumber = Report.ChecklistCatalog.DwgCurrentViewOnlyNumber;
 
         private static readonly JsonSerializerSettings SaveSettings = new JsonSerializerSettings { Formatting = Formatting.Indented };
 

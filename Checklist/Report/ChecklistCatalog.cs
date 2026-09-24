@@ -59,6 +59,8 @@ namespace TNovUtils.Checklist.Report
         public static readonly string[] NoPartsMarkers = { "-АР-", "_АР", "-ПОФ-", "_ПОФ", "-КР-", "_КР", "-КЖ-", "_КЖ" };
         // Маркеры ВК/ОВ — как у сценария ВК ОВ в MEPSpec (без ПТ и ТС)
         public static readonly string[] VkOvMarkers = { "-ВК", "_ВК", "-ОВ", "_ОВ" };
+        // Связи с кабельными лотками — для проверки арматуры над лотками
+        public static readonly string[] ElSsPsMarkers = { "-ЭЛ", "_ЭЛ", "-СС", "_СС", "-ПС", "_ПС" };
 
         // ---- Автопроверки: номера и названия (номера — ключи в autocheck.json) ----
         public const int GridsLevelsLinksNumber = 1;
@@ -71,6 +73,9 @@ namespace TNovUtils.Checklist.Report
         public const int RoomDepartmentNumber = 8;
         public const int AdskPostcheckNumber = 9;
         public const int RfCoordinationNumber = 10;
+        public const int PipeAccessoriesOverTraysNumber = 11;
+        public const int WetRoomsOverElectricalNumber = 12;
+        public const int DwgCurrentViewOnlyNumber = 13;
 
         public const string GridsLevelsLinksTitle = "Оси, уровни, связи";
         public const string AntiMirrorTitle = "Антизеркало";
@@ -82,12 +87,16 @@ namespace TNovUtils.Checklist.Report
         public const string RoomDepartmentTitle = "Заполненность Назначения помещений";
         public const string AdskPostcheckTitle = "Постпроверка ADSK";
         public const string RfCoordinationTitle = "Отсутствуют проблемы координации с файлом РФ";
+        public const string PipeAccessoriesOverTraysTitle = "Арматура и заглушки труб не над кабельными лотками";
+        public const string WetRoomsOverElectricalTitle = "Отсутствуют влажные помещения над электрощитовыми";
+        public const string DwgCurrentViewOnlyTitle = "Связи DWG вставлены с опцией Только текущий вид";
 
         /// <summary>Те же правила, что в конструкторе CheckRegistry.</summary>
         public static readonly IReadOnlyList<AutoCheckDef> AutoChecks = new[]
         {
             new AutoCheckDef(GridsLevelsLinksNumber, GridsLevelsLinksTitle, null),
             new AutoCheckDef(RfCoordinationNumber, RfCoordinationTitle, null),
+            new AutoCheckDef(DwgCurrentViewOnlyNumber, DwgCurrentViewOnlyTitle, null),
             new AutoCheckDef(AntiMirrorNumber, AntiMirrorTitle, ArOrPofMarkers),
             new AutoCheckDef(RebarNoMarkNumber, RebarNoMarkTitle, RebarNoMarkMarkers),
             new AutoCheckDef(NoPartsNumber, NoPartsTitle, NoPartsMarkers),
@@ -95,7 +104,9 @@ namespace TNovUtils.Checklist.Report
             new AutoCheckDef(EvacuationRoutesNumber, EvacuationRoutesTitle, ArMarkers),
             new AutoCheckDef(UnplacedRoomsNumber, UnplacedRoomsTitle, ArMarkers),
             new AutoCheckDef(RoomDepartmentNumber, RoomDepartmentTitle, ArMarkers),
-            new AutoCheckDef(AdskPostcheckNumber, AdskPostcheckTitle, VkOvMarkers)
+            new AutoCheckDef(WetRoomsOverElectricalNumber, WetRoomsOverElectricalTitle, ArMarkers),
+            new AutoCheckDef(AdskPostcheckNumber, AdskPostcheckTitle, VkOvMarkers),
+            new AutoCheckDef(PipeAccessoriesOverTraysNumber, PipeAccessoriesOverTraysTitle, VkOvMarkers)
         };
 
         // ---- Допуски устаревания — как в окне Чек-листа ----
@@ -119,8 +130,6 @@ namespace TNovUtils.Checklist.Report
             new BimCheckDef("columns-as-columns",
                 "Колонны и пилоны смоделированы инструментом Несущая колонна, в т.ч. в составе стен подземной части",
                 "-АР", "_АР", "-ПОФ", "_ПОФ", "-КР-", "_КР", "-КЖ-", "_КЖ", "-КЖ0", "-КЖ."),
-            new BimCheckDef("dwg-links-2d",
-                "Связи DWG вставлены с опцией Только текущий вид"),
             new BimCheckDef("elems-not-needed",
                 "В модели отсутствуют лишние элементы (не привязанные к объему здания)"),
             new BimCheckDef("balcony-doors-windows",

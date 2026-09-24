@@ -18,12 +18,13 @@ namespace TNovUtils.Checklist.Batch
     public static class AutoCheckBatchRunner
     {
         /// <summary>
-        /// Не выполняются в пакетном режиме: им нужны открытые рабочие наборы, а TNovAuto открывает
-        /// модель отсоединённой без наборов. Их результат в JSON не трогаем — остаётся ручной прогон.
+        /// Не выполняются в пакетном режиме: им нужны открытые рабочие наборы и загруженные связи, а TNovAuto
+        /// открывает модель отсоединённой без наборов. Их результат в JSON не трогаем — остаётся ручной прогон.
         /// </summary>
         private static readonly HashSet<int> ExcludedInBatch = new HashSet<int>
         {
-            AutoCheckStore.RfCoordinationNumber
+            AutoCheckStore.RfCoordinationNumber,
+            AutoCheckStore.PipeAccessoriesOverTraysNumber
         };
 
         /// <param name="modelName">Имя центральной модели без расширения, запятые заменены пробелами.</param>

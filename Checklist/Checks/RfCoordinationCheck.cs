@@ -143,7 +143,7 @@ namespace TNovUtils.Checklist.Checks
                 if (!IsRfWorkset(workset.Name)) wrong.Add(inst);
                 if (workset.IsOpen) continue;
 
-                if (allowUi && TryOpenWorkset(doc, inst) && table.GetWorkset(inst.WorksetId).IsOpen)
+                if (allowUi && LinkLoading.TryOpenWorkset(doc, inst) && table.GetWorkset(inst.WorksetId).IsOpen)
                     opened.Add(inst);
                 else
                     stillClosed.Add(inst);
@@ -164,20 +164,6 @@ namespace TNovUtils.Checklist.Checks
             return stillClosed.Count > 0;
         }
 
-        private static bool TryOpenWorkset(Document doc, Element element)
-        {
-            try
-            {
-                new UIDocument(doc).ShowElements(element.Id);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Logger.Log("РФ: не удалось открыть набор через ShowElements: " + ex.Message, 3);
-                return false;
-            }
-        }
-
         private static string WorksetName(WorksetTable table, Element e) => table.GetWorkset(e.WorksetId)?.Name ?? "?";
 
         /// <returns>true — связь не загружена и загрузить не удалось.</returns>
@@ -187,19 +173,7 @@ namespace TNovUtils.Checklist.Checks
             foreach (var type in rfTypes)
             {
                 if (RevitLinkType.IsLoaded(doc, type.Id)) continue;
-                string error;
-                try
-                {
-                    var result = type.Load().LoadResult;
-                    error = result == LinkLoadResultType.LinkLoaded || result == LinkLoadResultType.UsedExisting
-                        ? null
-                        : "Revit вернул статус «" + result + "»";
-                }
-                catch (Exception ex)
-                {
-                    error = ex.Message;
-                }
-
+                string error = LinkLoading.TryLoad(doc, type);
                 if (error == null)
                 {
                     log.Add($"\nСвязь {type.Name} была выгружена и загружена автоматически\n");
