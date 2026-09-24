@@ -41,6 +41,8 @@ namespace TNovUtils.Checklist.Checks
         private bool _loading;
         private bool _offline;
         private bool _disposed;
+        private bool _reloadWhenIdle; // UI-поток: сохранение упало, перечитать после очереди
+        private int _failEpoch;       // растёт при сохранении, упавшем из-за недоступности сервера
 
         /// <summary>Правки разрешены (или модель не сохранена — тогда правки только в окне).</summary>
         public event EventHandler CanEditChanged;
@@ -159,62 +161,101 @@ namespace TNovUtils.Checklist.Checks
         /// <param name="mutate">Фон: изменить модель (свежую копию); false — менять нечего. Может вызываться повторно.</param>
         /// <param name="before">Фон: до сохранения документа (запись лога, выгрузка фото). Ошибка отменяет правку.</param>
         /// <param name="after">Фон: после удачного сохранения (удаление старых файлов). Ошибки только в лог.</param>
+        /// <param name="failed">Фон: правка не сохранена (убрать то, что успел сделать <paramref name="before"/>). Ошибки только в лог.</param>
         /// <returns>false — правка сейчас невозможна (сервер недоступен, данные ещё грузятся).</returns>
-        public bool Edit(Func<T, bool> mutate, Func<Task> before = null, Func<Task> after = null)
+        public bool Edit(Func<T, bool> mutate, Func<Task> before = null, Func<Task> after = null, Func<Task> failed = null)
         {
             if (_disposed) return false;
             if (!HasKey) return true; // модель не сохранена — как раньше, правки живут только в окне
             if (!CanEdit) return false;
 
             _pending++;
+            int epoch = Volatile.Read(ref _failEpoch);
             Task.Run(async () =>
             {
                 StoredDocument saved = null;
                 T data = null;
                 Exception error = null;
+                bool skipped = false;
+                bool savedOk = false;
 
                 await _gate.WaitAsync().ConfigureAwait(false);
                 try
                 {
-                    if (before != null) await before().ConfigureAwait(false);
-
-                    StoredDocument known;
-                    lock (_sync) known = _current;
-                    saved = await _session.Store.UpdateAsync(_kind, _session.ModelKey, json =>
+                    // Предыдущая правка из очереди упала — сервер недоступен: остальные не пытаемся
+                    // сохранить (иначе N одинаковых ошибок и N диалогов). Окно перечитает документ.
+                    if (Volatile.Read(ref _failEpoch) != epoch)
                     {
-                        T model = _parse(json);
-                        return mutate(model) ? _serialize(model) : null;
-                    }, known).ConfigureAwait(false);
-                    lock (_sync) _current = saved;
-                    data = _parse(saved.Json);
+                        skipped = true;
+                    }
+                    else
+                    {
+                        if (before != null) await before().ConfigureAwait(false);
+
+                        StoredDocument known;
+                        lock (_sync) known = _current;
+                        saved = await _session.Store.UpdateAsync(_kind, _session.ModelKey, json =>
+                        {
+                            T model = _parse(json);
+                            return mutate(model) ? _serialize(model) : null;
+                        }, known).ConfigureAwait(false);
+                        savedOk = true;
+                        lock (_sync) _current = saved;
+                        data = _parse(saved.Json);
+                    }
                 }
                 catch (Exception ex)
                 {
                     error = ex;
+                    if (IsUnavailable(ex)) Interlocked.Increment(ref _failEpoch);
                 }
                 finally
                 {
                     _gate.Release();
                 }
 
-                if (error == null && after != null)
+                if (error == null && !skipped && after != null)
                 {
                     try { await after().ConfigureAwait(false); }
                     catch (Exception ex) { Logger.Log($"{_title}: не удалось убрать старые файлы: " + ex.Message, 2); }
                 }
+                if (error != null && !savedOk && failed != null)
+                {
+                    try { await failed().ConfigureAwait(false); }
+                    catch (Exception ex) { Logger.Log($"{_title}: не удалось убрать файлы несохранённой правки: " + ex.Message, 2); }
+                }
 
                 _ = _dispatcher.BeginInvoke(new Action(() =>
                 {
-                    _pending--;
-                    if (_disposed) return;
-                    if (error != null)
-                        OnSaveFailed(error);
-                    else
-                        OnSaved(saved, data);
+                    try
+                    {
+                        _pending--;
+                        if (skipped)
+                            Logger.Log($"{_title}: правка из очереди отменена — сервер недоступен.", 2);
+                        else if (error != null)
+                            OnSaveFailed(error);
+                        else if (!_disposed)
+                            OnSaved(saved, data);
+
+                        if (!_disposed && _pending == 0 && _reloadWhenIdle)
+                        {
+                            _reloadWhenIdle = false;
+                            Reload();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // Окно могло быть уже закрыто (обработчик Dispatcher снят) — не роняем Revit.
+                        Logger.Log($"{_title}: ошибка обработки результата сохранения: " + ex, 4);
+                    }
                 }));
             });
             return true;
         }
+
+        /// <summary>Сервер/шара недоступны: окно уходит в «только просмотр».</summary>
+        internal static bool IsUnavailable(Exception error) =>
+            error is DocumentStoreUnavailableException || error is IOException || error is UnauthorizedAccessException;
 
         private void OnSaved(StoredDocument saved, T data)
         {
@@ -224,20 +265,27 @@ namespace TNovUtils.Checklist.Checks
             catch (Exception ex) { Logger.Log($"Ошибка применения {_title}: " + ex, 4); }
         }
 
+        /// <summary>
+        /// UI-поток. Вызывается и после закрытия окна: сообщение показываем всё равно —
+        /// пользователь должен узнать, что последняя правка не записалась.
+        /// </summary>
         private void OnSaveFailed(Exception error)
         {
             Logger.Log($"Не удалось сохранить {_title}: " + error, 4);
-            bool unavailable = error is DocumentStoreUnavailableException || error is IOException
-                || error is UnauthorizedAccessException;
-            if (unavailable) SetState(_loaded, offline: true);
+            bool unavailable = IsUnavailable(error);
+            if (unavailable && !_disposed) SetState(_loaded, offline: true);
 
             string text = unavailable
-                ? $"Не удалось сохранить {_title}: сервер TNov недоступен.\nИзменение не записано. Окно переходит в режим «только просмотр»."
+                ? $"Не удалось сохранить {_title}: сервер TNov недоступен.\nИзменение не записано."
+                  + (_disposed ? "" : " Окно переходит в режим «только просмотр».")
                 : $"Не удалось сохранить {_title}: {error.Message}\nИзменение не записано.";
-            new InfoWindow280(text).ShowDialog();
+            try { new InfoWindow280(text).ShowDialog(); }
+            catch (Exception ex) { Logger.Log($"Не удалось показать сообщение об ошибке сохранения {_title}: " + ex.Message, 4); }
 
-            // Вернуть окну то, что реально лежит на сервере (или в кэше).
-            Reload();
+            if (_disposed) return;
+            // Вернуть окну то, что реально лежит на сервере (или в кэше) — когда очередь опустеет.
+            if (_pending == 0) Reload();
+            else _reloadWhenIdle = true;
         }
 
         /// <returns>false — окно занято, повторить на следующем тике.</returns>

@@ -172,6 +172,20 @@ namespace TNovUtils.Checklist.Checks
                     Creator = userName
                 });
             }
+
+            // Проверки, которых нет в этой сборке (добавлены в более новой версии плагина или
+            // отключены для раздела): сохраняем как есть в конце списка, иначе старая версия
+            // при первом же сохранении стёрла бы чужие результаты. В окне они не показываются —
+            // разделы окна берут пункты по номеру своей проверки (Get(number)).
+            if (current != null)
+            {
+                var known = new HashSet<int>(baseNumbers);
+                foreach (var item in current)
+                {
+                    if (item != null && known.Add(item.Number))
+                        result.Add(item);
+                }
+            }
             return result;
         }
 

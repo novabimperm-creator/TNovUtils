@@ -274,6 +274,9 @@ namespace TNovUtils.Checklist.UI
             string oldFileName = null, oldFileId = null;
             bool applied = false;
             var attachments = _attachments;
+            var session = _session;
+            string photosRoot = PhotosRootFolder;
+            bool stored = false; // фото уже лежит там, куда сошлётся документ (шара или /api/files)
 
             _doc.Edit(
                 items =>
@@ -292,6 +295,7 @@ namespace TNovUtils.Checklist.UI
                     Directory.CreateDirectory(itemFolder);
                     File.WriteAllBytes(newPath, png);
                     newFileId = await attachments.UploadPhotoAsync(id, newPath).ConfigureAwait(false);
+                    stored = true;
                 },
                 after: async () =>
                 {
@@ -302,18 +306,43 @@ namespace TNovUtils.Checklist.UI
                         return;
                     }
                     if (!string.IsNullOrEmpty(oldFileName) && oldFileName != newFileName)
-                        TryDeleteFile(Path.Combine(itemFolder, oldFileName));
+                        TryDeleteFile(SafePaths.PhotoPath(photosRoot, id, oldFileName));
                     if (!string.IsNullOrEmpty(oldFileId) && oldFileId != newFileId)
                         await attachments.DeletePhotoAsync(oldFileId).ConfigureAwait(false);
+                },
+                failed: async () =>
+                {
+                    // Документ не сохранён — загруженное фото ни на что не ссылается. Но если связь
+                    // оборвалась уже после записи на сервере, документ мог сохраниться: удаляем,
+                    // только когда свежая копия с сервера подтверждает, что ссылки на фото нет.
+                    if (stored)
+                    {
+                        bool referenced = true;
+                        try
+                        {
+                            StoredDocument current = await session.Store.LoadAsync(DocumentKinds.Checklist, session.ModelKey).ConfigureAwait(false);
+                            if (!current.FromCache)
+                                referenced = Parse(current.Json).Any(i => i.Id == id && i.PhotoFileName == newFileName);
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.Log("Не удалось проверить фото несохранённой правки: " + ex.Message, 2);
+                        }
+                        if (referenced) return; // неизвестно — лучше лишний файл, чем пункт с потерянным фото
+                    }
+                    TryDeleteFile(newPath);
+                    if (!string.IsNullOrEmpty(newFileId)) await attachments.DeletePhotoAsync(newFileId).ConfigureAwait(false);
                 });
         }
+
 
         private void DeletePhoto(CheckItem item)
         {
             if (item == null || string.IsNullOrEmpty(item.PhotoFileName) || !CanEdit) return;
 
             Guid id = item.Id;
-            string itemFolder = string.IsNullOrEmpty(PhotosRootFolder) ? null : Path.Combine(PhotosRootFolder, id.ToString());
+            string photosRoot = PhotosRootFolder;
+            string itemFolder = string.IsNullOrEmpty(photosRoot) ? null : Path.Combine(photosRoot, id.ToString());
             string oldFileName = null, oldFileId = null;
             var attachments = _attachments;
 
@@ -332,7 +361,7 @@ namespace TNovUtils.Checklist.UI
                 after: async () =>
                 {
                     if (itemFolder != null && !string.IsNullOrEmpty(oldFileName))
-                        TryDeleteFile(Path.Combine(itemFolder, oldFileName));
+                        TryDeleteFile(SafePaths.PhotoPath(photosRoot, id, oldFileName)); // имя из документа — проверяем
                     if (!string.IsNullOrEmpty(oldFileId))
                         await attachments.DeletePhotoAsync(oldFileId).ConfigureAwait(false);
                 });
@@ -548,6 +577,7 @@ namespace TNovUtils.Checklist.UI
 
         private static void TryDeleteFile(string path)
         {
+            if (string.IsNullOrEmpty(path)) return; // небезопасное имя из данных — не трогаем
             try { if (File.Exists(path)) File.Delete(path); }
             catch { }
         }

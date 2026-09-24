@@ -79,8 +79,8 @@ namespace TNovUtils.Checklist.Report
             try
             {
                 string server = _serverPath();
-                IChecklistDataSource source = _source?.Invoke();
-                var result = await Task.Run(() => ModelReportBuilder.Build(server, source));
+                // Фабрика источника может читать шару (tnovapi.json в TNovDesktop) — не в UI-потоке.
+                var result = await Task.Run(() => ModelReportBuilder.Build(server, _source?.Invoke()));
                 Apply(result);
             }
             catch (Exception ex)
