@@ -245,6 +245,9 @@ namespace TNovUtils
             this.btn_CreateFilter.ToolTip = parameterMode
                 ? "Фильтр вида по выбранным значениям параметра «" + this._parameter.Name + "»"
                 : "Фильтр вида по именам выбранных типов";
+            this.textBox_FilterName.ToolTip = parameterMode
+                ? "Имя фильтра вида. Пусто — «Категория_Параметр_Значение»"
+                : "Имя фильтра вида";
         }
 
         #endregion
@@ -304,8 +307,7 @@ namespace TNovUtils
             string filterName = this.textBox_FilterName.Text;
             if (parameter != null)
             {
-                if (string.IsNullOrWhiteSpace(filterName))
-                    filterName = parameter.Name;
+                // Пустое имя — фильтр назовется «Категория_Параметр_Значение».
                 List<TypeFilterParameterValueViewModel> values = items.Cast<TypeFilterParameterValueViewModel>().ToList();
                 TypeFilterRevitBridge.Enqueue(app => TypeFilterActions.CreateParameterFilter(app, data, parameter, values, filterName));
             }

@@ -3,7 +3,9 @@ using Autodesk.Revit.UI;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using System.Text.RegularExpressions;
 using TNovCommon;
 
 namespace TNovUtils
@@ -422,15 +424,23 @@ namespace TNovUtils
                 return;
             }
 
-            // Одинаковые значения из разных категорий — одно правило.
-            var groups = selectedValues.GroupBy(v => v.Value).ToList();
+            // Отмечен сплошной диапазон чисел (между отмеченными нет неотмеченных значений) — одно правило «от…до».
+            bool isRange = IsContiguousRange(selectedValues);
+            var groups = isRange
+                ? selectedValues.GroupBy(v => "").ToList()
+                // Одинаковые значения из разных категорий — одно правило.
+                : selectedValues.GroupBy(v => v.Value).ToList();
             var filters = new List<ElementFilter>();
             var skipped = new List<string>();
+            var included = new List<TypeFilterParameterValueViewModel>();
             foreach (var group in groups)
             {
                 ElementFilter filter = CreateValueFilter(info.Id, group.ToList());
                 if (filter != null)
+                {
                     filters.Add(filter);
+                    included.AddRange(group);
+                }
                 else
                     skipped.Add(group.Key);
             }
@@ -441,11 +451,80 @@ namespace TNovUtils
                 return;
             }
 
+            if (string.IsNullOrWhiteSpace(filterName))
+                filterName = BuildParameterFilterName(doc, categoryIds, info, included, isRange);
+
             if (CreateAndApplyFilter(doc, view, filterName, categoryIds, filters, "Не удалось создать фильтр по значениям параметра!")
                 && skipped.Count > 0)
             {
                 new InfoWindow280("Фильтр создан. Не вошли в фильтр значения: " + string.Join(", ", skipped)).ShowDialog();
             }
+        }
+
+        /// <summary>
+        /// Отмечено не меньше двух числовых значений, и среди значений этих категорий между ними нет неотмеченных.
+        /// </summary>
+        private static bool IsContiguousRange(List<TypeFilterParameterValueViewModel> selectedValues)
+        {
+            if (selectedValues.Any(v => v.IsEmpty || v.IsMissing || v.StorageType != StorageType.Double))
+                return false;
+            var selectedKeys = new HashSet<string>(selectedValues.Select(v => v.Value));
+            if (selectedKeys.Count < 2)
+                return false;
+
+            var all = selectedValues.Select(v => v.Category).Distinct()
+                .SelectMany(c => c.ParameterValues ?? new List<TypeFilterParameterValueViewModel>())
+                .Where(v => !v.IsEmpty && !v.IsMissing)
+                .GroupBy(v => v.Value)
+                .Select(g => new { g.Key, Min = g.Min(v => v.Min) })
+                .OrderBy(x => x.Min)
+                .ToList();
+            int first = all.FindIndex(x => selectedKeys.Contains(x.Key));
+            int last = all.FindLastIndex(x => selectedKeys.Contains(x.Key));
+            return first >= 0 && all.Skip(first).Take(last - first + 1).All(x => selectedKeys.Contains(x.Key));
+        }
+
+        /// <summary>
+        /// Имя фильтра «Категория_Параметр_Значение»: несколько категорий — «НескКатегорий»,
+        /// диапазон — «A...B», несколько значений — «A,B,C»; числа округляются до целого.
+        /// </summary>
+        private static string BuildParameterFilterName(Document doc, List<ElementId> categoryIds, TypeFilterParameterInfo info,
+            List<TypeFilterParameterValueViewModel> values, bool isRange)
+        {
+            string categoryPart = categoryIds.Count == 1
+                ? (Category.GetCategory(doc, categoryIds[0])?.Name
+                    ?? values.First(v => v.Category.Category.Id == categoryIds[0]).Category.Name)
+                : "НескКатегорий";
+
+            // Порядок значений: числа — по возрастанию, остальное — как в дереве.
+            var comparer = new AlphanumComparatorFastString();
+            List<TypeFilterParameterValueViewModel> ordered = values
+                .GroupBy(v => v.Value)
+                .Select(g => g.First())
+                .OrderBy(v => v.StorageType == StorageType.Double && !v.IsEmpty ? v.Min : 0)
+                .ThenBy(v => v.Value, comparer)
+                .ToList();
+            List<string> names = ordered.Select(v => RoundForName(v.Value, v.StorageType)).Distinct().ToList();
+
+            string valuePart = isRange && names.Count > 1
+                ? names.First() + "..." + names.Last()
+                : string.Join(",", names);
+            return categoryPart + "_" + info.Name + "_" + valuePart;
+        }
+
+        /// <summary>Число (у Double — возможно, с единицами: «1 500 мм») округляется до целого; прочий текст — как есть.</summary>
+        private static string RoundForName(string value, StorageType storageType)
+        {
+            string pattern = storageType == StorageType.Double
+                ? @"^\s*([-+]?\d[\d   ]*(?:[.,]\d+)?)\s*\D*$"
+                : @"^\s*([-+]?\d+(?:[.,]\d+)?)\s*$";
+            Match match = Regex.Match(value, pattern);
+            if (!match.Success)
+                return value;
+            string number = Regex.Replace(match.Groups[1].Value, @"[\s  ]", "").Replace(',', '.');
+            if (!double.TryParse(number, NumberStyles.Float, CultureInfo.InvariantCulture, out double d))
+                return value;
+            return Math.Round(d, MidpointRounding.AwayFromZero).ToString("0", CultureInfo.InvariantCulture);
         }
 
         /// <summary>Правило «параметр = значение» для группы значений с одинаковым отображением; null — не выразить.</summary>
