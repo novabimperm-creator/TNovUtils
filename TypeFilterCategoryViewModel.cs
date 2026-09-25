@@ -13,11 +13,17 @@ namespace TNovUtils
     public class TypeFilterCategoryViewModel : INotifyPropertyChanged
     {
         public Category Category;
+        /// <summary>Все элементы категории на виде.</summary>
+        public List<ElementId> ElementIds = new List<ElementId>();
+        /// <summary>Параметры, найденные у элементов категории (экземпляра и типа).</summary>
+        public Dictionary<ElementId, TypeFilterParameterInfo> Parameters = new Dictionary<ElementId, TypeFilterParameterInfo>();
         private string name;
         private bool isSelected;
         private List<TypeFilterElementTypeViewModel> elementTypes;
+        private List<TypeFilterParameterValueViewModel> parameterValues;
 
-        public ICollectionView ElementTypesView { get; private set; }
+        /// <summary>Дочерние строки дерева: типы или значения выбранного параметра.</summary>
+        public ICollectionView ChildrenView { get; private set; }
 
         public string Name
         {
@@ -40,12 +46,13 @@ namespace TNovUtils
                     return;
                 this.isSelected = value;
                 this.OnPropertyChanged(nameof(IsSelected));
-                if (this.ElementTypesView != null && this.ElementTypes != null)
-                {
-                    foreach (TypeFilterElementTypeViewModel elementTypeViewModel in this.ElementTypesView.Filter == null ? (IEnumerable<TypeFilterElementTypeViewModel>)this.ElementTypes : this.ElementTypesView.Cast<TypeFilterElementTypeViewModel>())
-                        elementTypeViewModel.IsSelected = this.isSelected;
-                }
-                else if (this.ElementTypes != null)
+                IEnumerable<ITypeFilterItem> items = this.ChildrenView != null && this.ChildrenView.Filter != null
+                    ? this.ChildrenView.Cast<ITypeFilterItem>().ToList()
+                    : this.Items;
+                foreach (ITypeFilterItem item in items)
+                    item.IsSelected = this.isSelected;
+                // Выбор категории в режиме параметров — это и выбор всех её типов.
+                if (this.IsParameterMode && this.ElementTypes != null)
                 {
                     foreach (TypeFilterElementTypeViewModel elementType in this.ElementTypes)
                         elementType.IsSelected = this.isSelected;
@@ -66,28 +73,54 @@ namespace TNovUtils
             }
         }
 
+        /// <summary>Значения выбранного параметра; null — режим типов.</summary>
+        public List<TypeFilterParameterValueViewModel> ParameterValues
+        {
+            get => this.parameterValues;
+            set
+            {
+                if (this.parameterValues == value)
+                    return;
+                this.parameterValues = value;
+                this.InitChildView();
+                this.OnPropertyChanged(nameof(ParameterValues));
+            }
+        }
+
+        public bool IsParameterMode => this.parameterValues != null;
+
+        public IEnumerable<ITypeFilterItem> Items =>
+            this.IsParameterMode
+                ? this.parameterValues.Cast<ITypeFilterItem>()
+                : (IEnumerable<ITypeFilterItem>)this.elementTypes ?? Enumerable.Empty<ITypeFilterItem>();
+
         private void InitChildView()
         {
-            this.ElementTypesView = CollectionViewSource.GetDefaultView((object)this.ElementTypes);
-            this.ElementTypesView.Filter = (Predicate<object>)null;
+            object source = this.IsParameterMode ? (object)this.parameterValues : this.elementTypes;
+            this.ChildrenView = source == null ? null : CollectionViewSource.GetDefaultView(source);
+            if (this.ChildrenView != null)
+                this.ChildrenView.Filter = (Predicate<object>)null;
+            this.OnPropertyChanged(nameof(ChildrenView));
         }
 
         public void SetFilter(string term)
         {
-            if (this.ElementTypesView == null)
+            if (this.ChildrenView == null)
                 this.InitChildView();
-            this.ElementTypesView.Filter = !string.IsNullOrWhiteSpace(term) ? (Predicate<object>)(o =>
+            if (this.ChildrenView == null)
+                return;
+            this.ChildrenView.Filter = !string.IsNullOrWhiteSpace(term) ? (Predicate<object>)(o =>
             {
-                string name = ((TypeFilterElementTypeViewModel)o).Name;
-                return name != null && name.IndexOf(term, StringComparison.OrdinalIgnoreCase) >= 0;
+                string text = ((ITypeFilterItem)o).SearchText;
+                return text != null && text.IndexOf(term, StringComparison.OrdinalIgnoreCase) >= 0;
             }) : (Predicate<object>)null;
-            this.ElementTypesView.Refresh();
+            this.ChildrenView.Refresh();
             this.OnPropertyChanged("HasAnyVisible");
         }
 
         public bool HasAnyVisible
         {
-            get => this.ElementTypesView != null && this.ElementTypesView.Cast<object>().Any<object>();
+            get => this.ChildrenView != null && this.ChildrenView.Cast<object>().Any<object>();
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

@@ -38,6 +38,7 @@ namespace TNovUtils.Checklist.Checks
                 checks.Add(new UnplacedRoomsCheck(store));
                 checks.Add(new RoomDepartmentCheck(store));
                 checks.Add(new WetRoomsOverElectricalCheck(store));
+                checks.Add(new LevelNumberCheck(store));
             }
             if (ModelNameRules.IsVkOvModel(doc))
             {
@@ -81,6 +82,7 @@ namespace TNovUtils.Checklist.Checks
                 list.Add((AutoCheckStore.UnplacedRoomsNumber, UnplacedRoomsCheck.DisplayTitle, UnplacedRoomsChecker.Run));
                 list.Add((AutoCheckStore.RoomDepartmentNumber, RoomDepartmentCheck.DisplayTitle, RoomDepartmentChecker.Run));
                 list.Add((AutoCheckStore.WetRoomsOverElectricalNumber, WetRoomsOverElectricalCheck.DisplayTitle, WetRoomsOverElectricalChecker.Run));
+                list.Add((AutoCheckStore.LevelNumberNumber, LevelNumberCheck.DisplayTitle, LevelNumberChecker.Run));
             }
             if (ModelNameRules.IsVkOvModel(modelName))
             {

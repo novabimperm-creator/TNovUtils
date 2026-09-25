@@ -8,11 +8,16 @@ using System.Threading.Tasks;
 
 namespace TNovUtils
 {
-    public class TypeFilterElementTypeViewModel : INotifyPropertyChanged
+    public class TypeFilterElementTypeViewModel : ITypeFilterItem, INotifyPropertyChanged
     {
         public ElementType ElementType;
         private string name;
         private bool isSelected;
+
+        /// <summary>Экземпляры этого типа на виде, для которого открыт Типофильтр.</summary>
+        public List<ElementId> ElementIds { get; } = new List<ElementId>();
+
+        public string SearchText => this.Name;
 
         public string Name
         {

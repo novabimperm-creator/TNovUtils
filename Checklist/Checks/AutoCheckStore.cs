@@ -27,6 +27,7 @@ namespace TNovUtils.Checklist.Checks
         public const int PipeAccessoriesOverTraysNumber = Report.ChecklistCatalog.PipeAccessoriesOverTraysNumber;
         public const int WetRoomsOverElectricalNumber = Report.ChecklistCatalog.WetRoomsOverElectricalNumber;
         public const int DwgCurrentViewOnlyNumber = Report.ChecklistCatalog.DwgCurrentViewOnlyNumber;
+        public const int LevelNumberNumber = Report.ChecklistCatalog.LevelNumberNumber;
 
         private static readonly JsonSerializerSettings SaveSettings = new JsonSerializerSettings { Formatting = Formatting.Indented };
 

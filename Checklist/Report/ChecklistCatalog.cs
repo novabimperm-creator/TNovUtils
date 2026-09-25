@@ -76,6 +76,7 @@ namespace TNovUtils.Checklist.Report
         public const int PipeAccessoriesOverTraysNumber = 11;
         public const int WetRoomsOverElectricalNumber = 12;
         public const int DwgCurrentViewOnlyNumber = 13;
+        public const int LevelNumberNumber = 14;
 
         public const string GridsLevelsLinksTitle = "Оси, уровни, связи";
         public const string AntiMirrorTitle = "Антизеркало";
@@ -90,6 +91,7 @@ namespace TNovUtils.Checklist.Report
         public const string PipeAccessoriesOverTraysTitle = "Арматура и заглушки труб не над кабельными лотками";
         public const string WetRoomsOverElectricalTitle = "Отсутствуют влажные помещения над электрощитовыми";
         public const string DwgCurrentViewOnlyTitle = "Связи DWG вставлены с опцией Только текущий вид";
+        public const string LevelNumberTitle = "Заполненность N_Эт.Номер";
 
         /// <summary>Те же правила, что в конструкторе CheckRegistry.</summary>
         public static readonly IReadOnlyList<AutoCheckDef> AutoChecks = new[]
@@ -105,6 +107,7 @@ namespace TNovUtils.Checklist.Report
             new AutoCheckDef(UnplacedRoomsNumber, UnplacedRoomsTitle, ArMarkers),
             new AutoCheckDef(RoomDepartmentNumber, RoomDepartmentTitle, ArMarkers),
             new AutoCheckDef(WetRoomsOverElectricalNumber, WetRoomsOverElectricalTitle, ArMarkers),
+            new AutoCheckDef(LevelNumberNumber, LevelNumberTitle, ArMarkers),
             new AutoCheckDef(AdskPostcheckNumber, AdskPostcheckTitle, VkOvMarkers),
             new AutoCheckDef(PipeAccessoriesOverTraysNumber, PipeAccessoriesOverTraysTitle, VkOvMarkers)
         };
