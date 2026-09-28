@@ -43,9 +43,11 @@ namespace TNovUtils.Issues.Api
         {
             if (!string.IsNullOrEmpty(_tokens.AccessToken))
                 req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _tokens.AccessToken);
-            else if (!string.IsNullOrEmpty(SyncKey))
+            else
             {
-                req.Headers.Add("X-TNov-Sync-Key", SyncKey);
+                // Без входа: из сети компании сайт принимает синхронизацию и так,
+                // снаружи — по ключу. Подпись «кто прислал» — имя пользователя Revit.
+                if (!string.IsNullOrEmpty(SyncKey)) req.Headers.Add("X-TNov-Sync-Key", SyncKey);
                 if (!string.IsNullOrEmpty(RevitUser)) req.Headers.Add("X-Revit-User", Uri.EscapeDataString(RevitUser));
             }
             return await _http.SendAsync(req);

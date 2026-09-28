@@ -62,10 +62,13 @@ namespace TNovUtils.Issues.ModelSync
         /// Можно ли отправлять: есть ключ синхронизации с папки раздачи или человек
         /// хоть раз входил в TNovPRO. Ни того, ни другого — молчим.
         /// </summary>
-        private static bool CanSend => !string.IsNullOrEmpty(_syncKey)
+        private static bool CanSend => _corporate || !string.IsNullOrEmpty(_syncKey)
                                        || Session.Tokens.HasRefresh || !string.IsNullOrEmpty(Session.Tokens.AccessToken);
 
         private static string _syncKey;
+        // Корпоративная установка TNov: из сети компании сайт принимает синхронизацию
+        // без входа и без ключа (решение Виктора: «при входе в модель автоматически»).
+        private static bool _corporate;
 
         /// <summary>
         /// Вызывается из TNov при запуске Revit. Ключ синхронизации — файл
@@ -75,6 +78,7 @@ namespace TNovUtils.Issues.ModelSync
         /// </summary>
         public static void Configure(string serverPath)
         {
+            _corporate = !string.IsNullOrEmpty(serverPath);
             Task.Run(() =>
             {
                 try
