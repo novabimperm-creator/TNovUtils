@@ -78,6 +78,29 @@ namespace TNovUtils.Issues.Api
             catch { /* best-effort */ }
         }
 
+        /// <summary>
+        /// Вход, сохранённый на диске СЕЙЧАС. Файл общий для всех экземпляров
+        /// плагина на машине: вход мог появиться или повернуться (refresh
+        /// ротируется) в другом окне уже после того, как эта сессия его прочла.
+        /// </summary>
+        public string PeekSaved()
+        {
+            try
+            {
+                return File.Exists(_refreshPath)
+                    ? Encoding.UTF8.GetString(Dpapi.Unprotect(File.ReadAllBytes(_refreshPath)))
+                    : null;
+            }
+            catch { return null; }
+        }
+
+        /// <summary>Взять сохранённый на диске вход в память (без перезаписи файла).</summary>
+        public void Adopt(string refreshToken)
+        {
+            RefreshToken = refreshToken;
+            AccessToken = null;
+        }
+
         public void Clear()
         {
             AccessToken = null;

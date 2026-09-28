@@ -26,20 +26,50 @@ namespace TNovUtils.Issues.Api
             _http = http; _tokens = tokens; _cookies = cookies; _container = container; _baseUri = baseUri;
         }
 
-        /// <summary>Обновить access по сохранённому refresh. false → нужен повторный вход.</summary>
+        /// <summary>
+        /// Обновить access по сохранённому refresh. false → нужен повторный вход.
+        ///
+        /// 🔴 Файл входа общий для всех экземпляров плагина на машине (окно «Вопросов»,
+        /// «Модель», старая надстройка TNovProIssues), а refresh ротируется. Раньше
+        /// сессия читала файл один раз при создании: вошёл человек позже — она об этом
+        /// не знала («Нет входа» сразу после входа, 2026-09-28); повернул вход соседний
+        /// экземпляр — её копия протухала, и отказ сервера СТИРАЛ файл, то есть
+        /// разлогинивал человека везде. Теперь: сначала свежий вход с диска, после
+        /// отказа — ещё раз с диска, стираем только тот вход, от которого отказался сервер.
+        /// </summary>
         public async Task<bool> RefreshAsync()
         {
+            var saved = _tokens.PeekSaved();
+            if (!string.IsNullOrEmpty(saved) && saved != _tokens.RefreshToken) _tokens.Adopt(saved);
             if (!_tokens.HasRefresh) return false;
-            var body = Json.Serialize(new { refreshToken = _tokens.RefreshToken });
+
+            var used = _tokens.RefreshToken;
+            if (await TryRefreshAsync(used)) return true;
+
+            var now = _tokens.PeekSaved();
+            if (!string.IsNullOrEmpty(now) && now != used)
+            {
+                _tokens.Adopt(now);
+                if (await TryRefreshAsync(now)) return true;
+                used = now;
+            }
+            if (_tokens.PeekSaved() == used) _tokens.Clear();
+            else _tokens.AccessToken = null;
+            return false;
+        }
+
+        private async Task<bool> TryRefreshAsync(string refreshToken)
+        {
+            var body = Json.Serialize(new { refreshToken });
             using (var req = new HttpRequestMessage(HttpMethod.Post, new Uri(_baseUri, "api/refresh-token")))
             {
                 req.Content = new StringContent(body, Encoding.UTF8, "application/json");
                 using (var resp = await _http.SendAsync(req))
                 {
-                    if (!resp.IsSuccessStatusCode) { _tokens.Clear(); return false; }
+                    if (!resp.IsSuccessStatusCode) return false;
                     var text = await resp.Content.ReadAsStringAsync();
                     var rr = Json.Deserialize<RefreshResponse>(text);
-                    if (rr == null || string.IsNullOrEmpty(rr.AccessToken)) { _tokens.Clear(); return false; }
+                    if (rr == null || string.IsNullOrEmpty(rr.AccessToken)) return false;
                     _tokens.SetTokens(rr.AccessToken, rr.RefreshToken); // refresh ротируется
                     _cookies.Save(_container, _baseUri);
                     return true;
