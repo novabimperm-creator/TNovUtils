@@ -29,11 +29,25 @@ namespace TNovUtils.Issues.Api
 
         public Uri BaseUri => _baseUri;
 
+        /// <summary>
+        /// Ключ синхронизации «Модели» (файл на корпоративной папке раздачи TNov).
+        /// Идёт, только когда человек не вошёл: сервер пускает по нему лишь на
+        /// синхронизацию, а всё остальное требует входа.
+        /// </summary>
+        public string SyncKey { get; set; }
+        /// <summary>Имя пользователя Revit — подпись изменений, присланных по ключу.</summary>
+        public string RevitUser { get; set; }
+
         // ── Низкоуровневая отправка с авто-refresh ───────────────────────────
         private async Task<HttpResponseMessage> SendOnceAsync(HttpRequestMessage req)
         {
             if (!string.IsNullOrEmpty(_tokens.AccessToken))
                 req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _tokens.AccessToken);
+            else if (!string.IsNullOrEmpty(SyncKey))
+            {
+                req.Headers.Add("X-TNov-Sync-Key", SyncKey);
+                if (!string.IsNullOrEmpty(RevitUser)) req.Headers.Add("X-Revit-User", Uri.EscapeDataString(RevitUser));
+            }
             return await _http.SendAsync(req);
         }
 
@@ -269,6 +283,91 @@ namespace TNovUtils.Issues.Api
                 return req;
             };
             await SendAsync(make);
+        }
+
+        // ── «Модель»: загрузка проекта и синхронизация (doc/BIM-ASK-SYNC.md в TNovPRO) ──
+
+        /// <summary>Имена документов Revit, загруженных на сайт: синхронизируются только они.</summary>
+        public async Task<List<string>> GetBimDocumentsAsync()
+        {
+            var body = await SendAsync(() => Make(HttpMethod.Get, "api/bim/sync/documents"));
+            var list = new List<string>();
+            foreach (var d in (JArray)JObject.Parse(body)["documents"] ?? new JArray()) list.Add((string)d);
+            return list;
+        }
+
+        /// <summary>
+        /// Загрузить большой файл частями (дом целиком — до 5 ГБ). Возвращает uploadId
+        /// для <see cref="ImportModelAsync"/> или <see cref="SyncModelAsync(string, string)"/>.
+        /// </summary>
+        public async Task<string> UploadChunkedAsync(string filePath, Action<long, long> progress = null)
+        {
+            long size = new System.IO.FileInfo(filePath).Length;
+            var begin = JObject.Parse(await SendAsync(() => Make(HttpMethod.Post, "api/bim/uploads/begin", new { size })));
+            string uploadId = (string)begin["uploadId"];
+            int chunk = (int?)begin["chunkSize"] ?? 8 * 1024 * 1024;
+            var buf = new byte[chunk];
+            using (var fs = System.IO.File.OpenRead(filePath))
+            {
+                long offset = 0;
+                while (offset < size)
+                {
+                    int n = await fs.ReadAsync(buf, 0, (int)Math.Min(chunk, size - offset));
+                    var part = new byte[n];
+                    Buffer.BlockCopy(buf, 0, part, 0, n);
+                    long at = offset;
+                    await SendAsync(() =>
+                    {
+                        var req = Make(HttpMethod.Post, "api/bim/uploads/part");
+                        req.Content = new ByteArrayContent(part);
+                        req.Content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+                        req.Headers.Add("X-Upload-Id", uploadId);
+                        req.Headers.Add("X-Chunk-Offset", at.ToString());
+                        return req;
+                    });
+                    offset += n;
+                    progress?.Invoke(offset, size);
+                }
+            }
+            await SendAsync(() => Make(HttpMethod.Post, "api/bim/uploads/finish", new { uploadId }));
+            return uploadId;
+        }
+
+        /// <summary>Разложить загруженный дом на сайте (роль BIM). Разбор идёт на сервере в фоне.</summary>
+        public async Task ImportModelAsync(string uploadId, string modelName)
+        {
+            await SendAsync(() => Make(HttpMethod.Post, "api/bim/models/import", new { uploadId, modelName }));
+        }
+
+        /// <summary>
+        /// Приращение синхронизации (.glb до 50 МБ телом запроса). false — документ
+        /// на сайт не загружен (404): не ошибка, просто этот проект не ведётся.
+        /// </summary>
+        public async Task<bool> SyncModelAsync(string document, byte[] glb)
+        {
+            try
+            {
+                await SendAsync(() =>
+                {
+                    var req = Make(HttpMethod.Post, "api/bim/sync?document=" + Q(document));
+                    req.Content = new ByteArrayContent(glb);
+                    req.Content.Headers.ContentType = new MediaTypeHeaderValue("model/gltf-binary");
+                    return req;
+                });
+                return true;
+            }
+            catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.NotFound) { return false; }
+        }
+
+        /// <summary>Большое приращение (изменили тип у тысяч элементов) — через загрузку частями.</summary>
+        public async Task<bool> SyncModelAsync(string document, string uploadId)
+        {
+            try
+            {
+                await SendAsync(() => Make(HttpMethod.Post, "api/bim/sync", new { uploadId, document }));
+                return true;
+            }
+            catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.NotFound) { return false; }
         }
 
         /// <summary>Скачать байты по относительному url (фото/превью) с авто-refresh.</summary>
