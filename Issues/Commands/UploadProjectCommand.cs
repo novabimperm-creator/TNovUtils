@@ -74,7 +74,7 @@ namespace TNovUtils.Issues.Commands
                     MainInstruction = $"Загрузить «{modelName}» во вкладку «Модель»?",
                     MainContent = $"Разделы: {ModelLinks.SectionOf(document)}"
                                   + (chosen.Count > 0 ? ", " + string.Join(", ", chosen.Select(c => c.Section)) : "") + ".\n\n"
-                                  + "Дом выгружается целиком — на большом проекте это минуты. "
+                                  + "Дом выгружается и отправляется по разделам — на большом проекте это минуты. "
                                   + "Дальше сайт обновляется сам при каждой синхронизации с центральной моделью.",
                     CommonButtons = TaskDialogCommonButtons.Yes | TaskDialogCommonButtons.No,
                     DefaultButton = TaskDialogResult.Yes,
@@ -84,7 +84,8 @@ namespace TNovUtils.Issues.Commands
                 var report = new StringBuilder();
                 var clock = Stopwatch.StartNew();
                 var window = new ExportProgressWindow("Загрузка проекта в TNovPRO", uiapp.MainWindowHandle);
-                ModelExporter.ExportResult result;
+                int sections = 0, elementsTotal = 0;
+                bool cancelled = false;
                 try
                 {
                     window.Show();
@@ -106,29 +107,41 @@ namespace TNovUtils.Issues.Commands
                     var wanted = new HashSet<string>(chosen.Select(c => c.FileName), StringComparer.OrdinalIgnoreCase);
                     var ids = ModelLinks.Collect(doc).Where(l => wanted.Contains(l.FileName)).Select(l => l.InstanceId).ToList();
 
-                    result = ModelExporter.ExportProject(doc, int.MaxValue, ModelExporter.ExportProfile.Ask, say, progress, ids);
-                    if (result.Cancelled)
+                    // По разделам: выгрузили раздел → отправили → удалили временные файлы → следующий.
+                    // Весь дом ни в Revit, ни на сервере целиком в памяти не бывает.
+                    foreach (var part in ModelExporter.ExportProjectSections(doc, say, progress, ids))
                     {
-                        TryDelete(result.GlbFile);
-                        return Result.Cancelled;
+                        try
+                        {
+                            if (part.Cancelled) { cancelled = true; break; }
+                            var send = Task.Run(async () =>
+                            {
+                                var geomId = part.WithGeometry > 0
+                                    ? await session.Client.UploadChunkedAsync(part.GlbFile, (done, total) =>
+                                        window.Dispatcher.BeginInvoke(new Action(() => window.SetStage($"{part.Section}: отправка геометрии", done, total))))
+                                    : null;
+                                var passId = await session.Client.UploadChunkedAsync(part.PassportsFile, (done, total) =>
+                                    window.Dispatcher.BeginInvoke(new Action(() => window.SetStage($"{part.Section}: отправка паспортов", done, total))));
+                                await session.Client.ImportSectionAsync(modelName, part.Section, part.Document, part.Matrix, geomId, passId);
+                            });
+                            while (!send.IsCompleted)
+                            {
+                                window.Pump();
+                                Thread.Sleep(50);
+                            }
+                            send.GetAwaiter().GetResult();   // ошибка отправки — в общий catch
+                            sections++;
+                            elementsTotal += part.Elements;
+                            // Раздел начинаем вести сразу, не дожидаясь, пока плагин обновит список.
+                            ModelSyncService.MarkLoaded(part.Document);
+                            say($"{part.Section}: отправлен ({part.Document})");
+                        }
+                        finally
+                        {
+                            part.DeleteFiles();
+                        }
+                        if (window.CancelRequested) { cancelled = true; break; }
                     }
-
-                    // Отправка — в фоне, окно при этом живёт и показывает ход.
-                    string file = result.GlbFile;
-                    var upload = Task.Run(async () =>
-                    {
-                        var uploadId = await session.Client.UploadChunkedAsync(file,
-                            (done, total) => window.Dispatcher.BeginInvoke(new Action(() =>
-                                window.SetStage("отправка на сайт", done, total))));
-                        await session.Client.ImportModelAsync(uploadId, modelName);
-                    });
-                    while (!upload.IsCompleted)
-                    {
-                        window.Pump();
-                        Thread.Sleep(50);
-                    }
-                    TryDelete(file);
-                    upload.GetAwaiter().GetResult();   // ошибка отправки — в общий catch
                 }
                 finally
                 {
@@ -136,15 +149,12 @@ namespace TNovUtils.Issues.Commands
                 }
                 clock.Stop();
 
-                // Разделы начинаем вести сразу, не дожидаясь, пока плагин обновит список.
-                ModelSyncService.MarkLoaded(document);
-                foreach (var c in chosen) ModelSyncService.MarkLoaded(Path.GetFileNameWithoutExtension(c.FileName));
-
                 new TaskDialog("Загрузить проект в TNovPRO")
                 {
-                    MainInstruction = "Отправлено — сайт раскладывает модель",
-                    MainContent = $"«{modelName}»: {result.PropertyCount:N0} элементов, {result.GlbLength / 1024.0 / 1024.0:N1} МБ, "
-                                  + $"{clock.Elapsed.TotalMinutes:N1} мин.\n"
+                    MainInstruction = cancelled
+                        ? $"Прервано — отправлено разделов: {sections}"
+                        : "Отправлено — сайт раскладывает модель",
+                    MainContent = $"«{modelName}»: разделов {sections}, элементов {elementsTotal:N0}, {clock.Elapsed.TotalMinutes:N1} мин.\n"
                                   + "Через пару минут модель появится на сайте: «Проекты» → «Модель».\n\n" + report,
                 }.Show();
                 return Result.Succeeded;

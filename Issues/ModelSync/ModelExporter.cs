@@ -368,6 +368,105 @@ namespace TNovUtils.Issues.ModelSync
             };
         }
 
+        /// <summary>Один раздел дома, готовый к отправке (import-section).</summary>
+        public sealed class SectionExport
+        {
+            public string Section;
+            public string Document;
+            public double[] Matrix;
+            /// <summary>Геометрия раздела, .glb без паспортов, координаты дома (временный файл).</summary>
+            public string GlbFile;
+            /// <summary>Паспорта построчно: {"key": id, ...паспорт} на строку (временный файл).</summary>
+            public string PassportsFile;
+            public int Elements;
+            public int WithGeometry;
+            public bool Cancelled;
+
+            public void DeleteFiles()
+            {
+                foreach (var f in new[] { GlbFile, PassportsFile })
+                    try { if (!string.IsNullOrEmpty(f) && File.Exists(f)) File.Delete(f); } catch { }
+            }
+        }
+
+        private sealed class CenterHolder { public XYZ Center; }
+
+        /// <summary>
+        /// Дом ПО РАЗДЕЛАМ для «Модели»: основной документ, затем выбранные связи —
+        /// по одному. Каждый раздел выгружается, отдаётся вызывающему (он отправляет
+        /// его на сайт) и забывается до следующего: весь дом в памяти Revit не
+        /// держится, а сбой стоит одного раздела, а не всей выгрузки.
+        ///
+        /// 🔴 Одним файлом дом не годится: у 76-СУЗДАЛ.23 JSON паспортов — 494 МБ,
+        /// сервер разбирал бы его целиком в памяти процесса, общего с чатом.
+        /// </summary>
+        public static IEnumerable<SectionExport> ExportProjectSections(Document host, Action<string> log = null,
+            ExportProgress progress = null, ICollection<ElementId> onlyLinks = null)
+        {
+            if (host == null) throw new ArgumentNullException(nameof(host));
+            var holder = new CenterHolder();
+
+            SectionExport Export(Document doc, Transform place)
+            {
+                PropertyCollector.ResetTypeCache();
+                var name = DocumentName(doc);
+                var section = SectionOf(name);
+                var meshes = new List<RoleMesh>();
+                var properties = new Dictionary<string, object>();
+                var center = holder.Center;
+                // Ключи без раздела: раздел сайт подставит сам (как в приращениях).
+                var part = CollectForAsk(doc, place, null, ref center, meshes, properties, progress, log);
+                holder.Center = center;
+                var result = new SectionExport
+                {
+                    Section = section,
+                    Document = name,
+                    Matrix = SectionMatrix(place, center),
+                    Elements = properties.Count,
+                    WithGeometry = meshes.Count,
+                    Cancelled = part.Cancelled,
+                };
+                progress?.Report($"{section}: запись файлов");
+                result.GlbFile = BuildGlbFile(meshes, new Dictionary<string, object>(), null, out _);
+                result.PassportsFile = Path.Combine(Path.GetTempPath(), "tnovpro-passports-" + Guid.NewGuid().ToString("N") + ".ndjson");
+                using (var w = new StreamWriter(result.PassportsFile, false, new UTF8Encoding(false)))
+                {
+                    foreach (var pair in properties)
+                    {
+                        var map = pair.Value as Dictionary<string, object> ?? new Dictionary<string, object>();
+                        var line = new Dictionary<string, object>(map) { ["key"] = pair.Key };
+                        w.WriteLine(JsonConvert.SerializeObject(line));
+                    }
+                }
+                log?.Invoke($"{section}: паспортов {result.Elements:N0}, с геометрией {result.WithGeometry:N0}");
+                return result;
+            }
+
+            var first = Export(host, null);
+            yield return first;
+            if (first.Cancelled) yield break;
+
+            var chosen = onlyLinks == null ? null
+                : new HashSet<long>(onlyLinks.Where(id => id != null).Select(id => id.LongValue()));
+            var links = ModelLinks.Collect(host)
+                .Where(l => l.Loaded && (chosen == null || chosen.Contains(l.InstanceId.LongValue())))
+                .ToList();
+            for (int i = 0; i < links.Count; i++)
+            {
+                if (progress != null && progress.IsCancelled) yield break;
+                var li = host.GetElement(links[i].InstanceId) as RevitLinkInstance;
+                Document ld = null;
+                try { ld = li?.GetLinkDocument(); } catch { }
+                if (ld == null) continue;
+                progress?.Report($"раздел {i + 2} из {links.Count + 1}: {SectionOf(DocumentName(ld))}");
+                Transform place = null;
+                try { place = li.GetTotalTransform(); } catch { }
+                var part = Export(ld, place);
+                yield return part;
+                if (part.Cancelled) yield break;
+            }
+        }
+
         /// <summary>Раздел из имени файла: «76-СУЗДАЛ.23_ОВ_С1» → «ОВ_С1».</summary>
         private static string SectionOf(string title)
         {

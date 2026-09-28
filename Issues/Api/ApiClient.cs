@@ -342,6 +342,17 @@ namespace TNovUtils.Issues.Api
         }
 
         /// <summary>
+        /// Один раздел большого дома (роль BIM): геометрия и паспорта уже загружены
+        /// частями. Сайт разбирает в фоне и заменяет раздел целиком.
+        /// </summary>
+        public async Task ImportSectionAsync(string modelName, string section, string document, double[] matrix,
+                                             string geometryUploadId, string passportsUploadId)
+        {
+            await SendAsync(() => Make(HttpMethod.Post, "api/bim/models/import-section",
+                new { modelName, section, document, matrix, geometryUploadId, passportsUploadId }));
+        }
+
+        /// <summary>
         /// Приращение синхронизации (.glb до 50 МБ телом запроса). false — документ
         /// на сайт не загружен (404): не ошибка, просто этот проект не ведётся.
         /// </summary>
