@@ -28,6 +28,7 @@ namespace TNovUtils.Checklist.Checks
         public const int WetRoomsOverElectricalNumber = Report.ChecklistCatalog.WetRoomsOverElectricalNumber;
         public const int DwgCurrentViewOnlyNumber = Report.ChecklistCatalog.DwgCurrentViewOnlyNumber;
         public const int LevelNumberNumber = Report.ChecklistCatalog.LevelNumberNumber;
+        public const int WallLightsObstructedNumber = Report.ChecklistCatalog.WallLightsObstructedNumber;
 
         private static readonly JsonSerializerSettings SaveSettings = new JsonSerializerSettings { Formatting = Formatting.Indented };
 

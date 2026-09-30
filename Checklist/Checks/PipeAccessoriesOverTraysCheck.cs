@@ -240,74 +240,8 @@ namespace TNovUtils.Checklist.Checks
         private static List<TrayShape> CollectTrays(Document doc, bool allowUi, double zMin, double zMax, StringBuilder log)
         {
             var trays = new List<TrayShape>();
-            var linkTypes = new FilteredElementCollector(doc)
-                .OfClass(typeof(RevitLinkType))
-                .Cast<RevitLinkType>()
-                .Where(t => !t.IsNestedLink && ModelNameRules.ContainsAny(t.Name, Report.ChecklistCatalog.ElSsPsMarkers))
-                .ToList();
-            if (linkTypes.Count == 0)
-            {
-                log.AppendLine();
-                log.AppendLine("Связи ЭЛ/СС/ПС (-ЭЛ, _ЭЛ, -СС, _СС, -ПС, _ПС) не найдены");
-                return trays;
-            }
-
-            var allInstances = new FilteredElementCollector(doc)
-                .OfClass(typeof(RevitLinkInstance))
-                .Cast<RevitLinkInstance>()
-                .ToList();
-            var table = doc.IsWorkshared ? doc.GetWorksetTable() : null;
-
-            foreach (var type in linkTypes)
-            {
-                var instances = allInstances.Where(i => i.GetTypeId() == type.Id).ToList();
-                if (instances.Count == 0)
-                {
-                    log.AppendLine();
-                    log.AppendLine($"Экземпляр связи {type.Name} не размещён в модели");
-                    continue;
-                }
-
-                bool openedWorkset = false;
-                if (table != null)
-                {
-                    foreach (var inst in instances)
-                    {
-                        var workset = table.GetWorkset(inst.WorksetId);
-                        if (workset == null || workset.IsOpen) continue;
-                        if (allowUi && LinkLoading.TryOpenWorkset(doc, inst) && table.GetWorkset(inst.WorksetId).IsOpen)
-                        {
-                            openedWorkset = true;
-                            log.AppendLine();
-                            log.AppendLine($"Рабочий набор «{workset.Name}» связи {type.Name} был закрыт и открыт автоматически");
-                        }
-                        else
-                        {
-                            log.AppendLine();
-                            log.AppendLine($"Рабочий набор «{workset.Name}» связи {type.Name} закрыт — связь не проверена, откройте набор");
-                        }
-                    }
-                }
-
-                // Выгруженную пользователем связь не загружаем; загружаем только после открытия её набора
-                if (!RevitLinkType.IsLoaded(doc, type.Id))
-                {
-                    string error = openedWorkset ? LinkLoading.TryLoad(doc, type) : "связь выгружена";
-                    if (error != null)
-                    {
-                        log.AppendLine();
-                        log.AppendLine($"Связь {type.Name} не проверена: {error}");
-                        continue;
-                    }
-                }
-
-                foreach (var inst in instances)
-                {
-                    var linkDoc = inst.GetLinkDocument();
-                    if (linkDoc == null) continue;
-                    CollectTrays(linkDoc, inst.GetTotalTransform(), type.Name, zMin, zMax, trays);
-                }
-            }
+            foreach (var link in LinkLoading.CollectLoaded(doc, Report.ChecklistCatalog.ElSsPsMarkers, "ЭЛ/СС/ПС", allowUi, log))
+                CollectTrays(link.Document, link.Transform, link.Name, zMin, zMax, trays);
             return trays;
         }
 

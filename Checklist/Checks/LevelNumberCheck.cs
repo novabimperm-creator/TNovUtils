@@ -65,7 +65,8 @@ namespace TNovUtils.Checklist.Checks
     /// <summary>
     /// Элементы категорий плагина Эт.Номер (кроме балок и отверстий — их заполняют КР/BIM):
     /// N_Эт.Номер отсутствует, пуст или не совпадает с уровнем, который определил бы плагин.
-    /// Уровень определяется тем же LevelResolver с настройками проекта из JSON плагина. Модель не меняет.
+    /// Уровень и номер (монолитные перекрытия -1, без 0) определяются тем же LevelResolver
+    /// с настройками проекта из JSON плагина. Значение 0 всегда ошибка. Модель не меняет.
     /// </summary>
     public static class LevelNumberChecker
     {
@@ -88,12 +89,13 @@ namespace TNovUtils.Checklist.Checks
 
                 Parameter p = elem.get_Parameter(LevelNumberParam.Guid);
                 if (p == null) { noParam.Add(elem); continue; }
+                if (LevelNumberParam.IsDrivenByParent(elem, p)) continue; //значение из родительского семейства
 
                 LevelResolveResult resolved = resolver.Resolve(elem);
-                if (resolved.Level == null) { unresolved.Add((elem, resolved.Info)); continue; }
+                if (!resolved.Number.HasValue) { unresolved.Add((elem, resolved.Info)); continue; }
 
-                double expected = LevelResolver.ParseLevelNumber(resolved.Level.Name);
-                if (!p.HasValue) { empty.Add((elem, "ожидается " + Format(expected) + " (" + resolved.Level.Name + ")")); continue; }
+                double expected = resolved.Number.Value;
+                if (!p.HasValue) { empty.Add((elem, "ожидается " + Format(expected) + " (" + resolved.Info + ")")); continue; }
 
                 double actual = LevelNumberParam.Decode(p.AsDouble());
                 if (Math.Abs(actual - expected) > 0.001)
@@ -115,7 +117,7 @@ namespace TNovUtils.Checklist.Checks
             }
             AppendGroup(log, ids, "N_Эт.Номер не заполнен", empty);
             AppendGroup(log, ids, "N_Эт.Номер не соответствует уровню", wrong);
-            AppendGroup(log, ids, "Уровень не определяется (нет уровня и геометрии)", unresolved);
+            AppendGroup(log, ids, "Номер этажа не определяется (нет уровня и геометрии или имя уровня без кода)", unresolved);
 
             // Значение верное, но уровень получен по отметке — модель стоит поправить; на результат не влияет
             if (byGeometry.Count > 0)

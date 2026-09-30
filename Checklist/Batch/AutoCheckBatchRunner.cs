@@ -24,7 +24,8 @@ namespace TNovUtils.Checklist.Batch
         private static readonly HashSet<int> ExcludedInBatch = new HashSet<int>
         {
             AutoCheckStore.RfCoordinationNumber,
-            AutoCheckStore.PipeAccessoriesOverTraysNumber
+            AutoCheckStore.PipeAccessoriesOverTraysNumber,
+            AutoCheckStore.WallLightsObstructedNumber
         };
 
         /// <param name="modelName">Имя центральной модели без расширения, запятые заменены пробелами.</param>

@@ -45,6 +45,8 @@ namespace TNovUtils.Checklist.Checks
                 checks.Add(new AdskPostcheckCheck(store));
                 checks.Add(new PipeAccessoriesOverTraysCheck(store));
             }
+            if (ModelNameRules.IsElModel(doc))
+                checks.Add(new WallLightsObstructedCheck(store));
             Checks = checks;
         }
 
@@ -91,6 +93,10 @@ namespace TNovUtils.Checklist.Checks
                 list.Add((AutoCheckStore.PipeAccessoriesOverTraysNumber, PipeAccessoriesOverTraysCheck.DisplayTitle,
                     d => PipeAccessoriesOverTraysChecker.Run(d, allowUi: false)));
             }
+            // Связи в пакете не загружены — проверка исключена в AutoCheckBatchRunner
+            if (ModelNameRules.IsElModel(modelName))
+                list.Add((AutoCheckStore.WallLightsObstructedNumber, WallLightsObstructedCheck.DisplayTitle,
+                    d => WallLightsObstructedChecker.Run(d, allowUi: false)));
             return list;
         }
     }

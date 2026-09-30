@@ -61,6 +61,9 @@ namespace TNovUtils.Checklist.Report
         public static readonly string[] VkOvMarkers = { "-ВК", "_ВК", "-ОВ", "_ОВ" };
         // Связи с кабельными лотками — для проверки арматуры над лотками
         public static readonly string[] ElSsPsMarkers = { "-ЭЛ", "_ЭЛ", "-СС", "_СС", "-ПС", "_ПС" };
+        public static readonly string[] ElMarkers = { "-ЭЛ", "_ЭЛ" };
+        // Связи с трубами, воздуховодами и лотками — для проверки светильников на стенах
+        public static readonly string[] VkOvSsMarkers = { "-ВК", "_ВК", "-ОВ", "_ОВ", "-СС", "_СС" };
 
         // ---- Автопроверки: номера и названия (номера — ключи в autocheck.json) ----
         public const int GridsLevelsLinksNumber = 1;
@@ -77,6 +80,7 @@ namespace TNovUtils.Checklist.Report
         public const int WetRoomsOverElectricalNumber = 12;
         public const int DwgCurrentViewOnlyNumber = 13;
         public const int LevelNumberNumber = 14;
+        public const int WallLightsObstructedNumber = 15;
 
         public const string GridsLevelsLinksTitle = "Оси, уровни, связи";
         public const string AntiMirrorTitle = "Антизеркало";
@@ -92,6 +96,7 @@ namespace TNovUtils.Checklist.Report
         public const string WetRoomsOverElectricalTitle = "Отсутствуют влажные помещения над электрощитовыми";
         public const string DwgCurrentViewOnlyTitle = "Связи DWG вставлены с опцией Только текущий вид";
         public const string LevelNumberTitle = "Заполненность N_Эт.Номер";
+        public const string WallLightsObstructedTitle = "Светильники на стенах не перекрыты трубами, воздуховодами и лотками";
 
         /// <summary>Те же правила, что в конструкторе CheckRegistry.</summary>
         public static readonly IReadOnlyList<AutoCheckDef> AutoChecks = new[]
@@ -109,7 +114,8 @@ namespace TNovUtils.Checklist.Report
             new AutoCheckDef(WetRoomsOverElectricalNumber, WetRoomsOverElectricalTitle, ArMarkers),
             new AutoCheckDef(LevelNumberNumber, LevelNumberTitle, ArMarkers),
             new AutoCheckDef(AdskPostcheckNumber, AdskPostcheckTitle, VkOvMarkers),
-            new AutoCheckDef(PipeAccessoriesOverTraysNumber, PipeAccessoriesOverTraysTitle, VkOvMarkers)
+            new AutoCheckDef(PipeAccessoriesOverTraysNumber, PipeAccessoriesOverTraysTitle, VkOvMarkers),
+            new AutoCheckDef(WallLightsObstructedNumber, WallLightsObstructedTitle, ElMarkers)
         };
 
         // ---- Допуски устаревания — как в окне Чек-листа ----

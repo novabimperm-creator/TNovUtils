@@ -23,6 +23,8 @@ namespace TNovUtils.Checklist.Checks
         // Маркеры ВК/ОВ — как у сценария ВК ОВ в MEPSpec (без ПТ и ТС)
         public static bool IsVkOvModel(Document doc) => ContainsAny(doc, ChecklistCatalog.VkOvMarkers);
 
+        public static bool IsElModel(Document doc) => ContainsAny(doc, ChecklistCatalog.ElMarkers);
+
         // Перегрузки по имени модели — для отчёта, который работает без открытого документа.
         // Имя уже очищено от суффикса «_пользователь» (как в журнале синхронизаций).
         public static bool IsArOrPof(string name) => ContainsAny(name, ChecklistCatalog.ArOrPofMarkers);
@@ -34,6 +36,8 @@ namespace TNovUtils.Checklist.Checks
         public static bool IsNoPartsModel(string name) => ContainsAny(name, ChecklistCatalog.NoPartsMarkers);
 
         public static bool IsVkOvModel(string name) => ContainsAny(name, ChecklistCatalog.VkOvMarkers);
+
+        public static bool IsElModel(string name) => ContainsAny(name, ChecklistCatalog.ElMarkers);
 
         public static bool ContainsAny(string name, params string[] markers) =>
             ChecklistCatalog.ContainsAny(name, markers);
