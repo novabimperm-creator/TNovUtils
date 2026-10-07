@@ -6,15 +6,6 @@
     <AssemblyName>TNovUtils</AssemblyName>
   </PropertyGroup>
 
-  <!-- Страховка для модуля Issues: константы конфигурации доступны, даже если
-       общий TNov.Build.props их не объявляет (дубликаты в DefineConstants безвредны). -->
-  <PropertyGroup Condition="'$(Configuration)' == 'R2022'">
-    <DefineConstants>$(DefineConstants);R2022</DefineConstants>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)' == 'R2027'">
-    <DefineConstants>$(DefineConstants);R2027</DefineConstants>
-  </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
   </ItemGroup>

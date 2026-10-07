@@ -81,11 +81,7 @@ namespace TNovUtils.Issues.Revit
                 .WhereElementIsNotElementType()
                 .WherePasses(filter)
                 .ToElements()
-#if R2027
-                .Where(el => !selectedSet.Contains(el.Id.Value))
-#else
-                .Where(el => !selectedSet.Contains(el.Id.IntValue()))
-#endif
+                .Where(el => !selectedSet.Contains(el.Id.LongValue()))
                 .Where(el => el.Category != null && el.Category.CategoryType == CategoryType.Model)
                 .Select(el => new { el, dist = DistanceToCenter(el, center) })
                 .OrderBy(x => x.dist)
@@ -135,11 +131,7 @@ namespace TNovUtils.Issues.Revit
             };
         }
 
-#if R2027
-        private static ElementId MakeElementId(long value) => new ElementId(value); // Revit 2024+: long-конструктор
-#else
-        private static ElementId MakeElementId(long value) => new ElementId(unchecked((int)value));
-#endif
+        private static ElementId MakeElementId(long value) => ToElementId(value);
 
         /// <summary>Расстояние от центра bbox элемента до центра выделения (для отбора ближайших соседей). Нет геометрии → +∞.</summary>
         private static double DistanceToCenter(Element el, XYZ center)

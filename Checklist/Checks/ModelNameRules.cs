@@ -25,6 +25,8 @@ namespace TNovUtils.Checklist.Checks
 
         public static bool IsElModel(Document doc) => ContainsAny(doc, ChecklistCatalog.ElMarkers);
 
+        public static bool IsTaskHolesModel(Document doc) => ContainsAny(doc, ChecklistCatalog.TaskHolesMarkers);
+
         // Перегрузки по имени модели — для отчёта, который работает без открытого документа.
         // Имя уже очищено от суффикса «_пользователь» (как в журнале синхронизаций).
         public static bool IsArOrPof(string name) => ContainsAny(name, ChecklistCatalog.ArOrPofMarkers);
@@ -38,6 +40,8 @@ namespace TNovUtils.Checklist.Checks
         public static bool IsVkOvModel(string name) => ContainsAny(name, ChecklistCatalog.VkOvMarkers);
 
         public static bool IsElModel(string name) => ContainsAny(name, ChecklistCatalog.ElMarkers);
+
+        public static bool IsTaskHolesModel(string name) => ContainsAny(name, ChecklistCatalog.TaskHolesMarkers);
 
         public static bool ContainsAny(string name, params string[] markers) =>
             ChecklistCatalog.ContainsAny(name, markers);

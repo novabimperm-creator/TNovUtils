@@ -85,13 +85,17 @@ namespace TNovUtils.Checklist.Revit
         /// Всё, что не удалось проверить, пишется в лог.
         /// </summary>
         /// <param name="label">Разделы связей для лога, например «ЭЛ/СС/ПС».</param>
-        public static List<LoadedLink> CollectLoaded(Document doc, string[] markers, string label, bool allowUi, StringBuilder log)
+        /// <param name="loadUnloaded">Загружать и выгруженную пользователем связь (загруженную не перезагружаем).</param>
+        /// <param name="exclude">Связи с этой подстрокой в имени пропускаются.</param>
+        public static List<LoadedLink> CollectLoaded(Document doc, string[] markers, string label, bool allowUi, StringBuilder log,
+            bool loadUnloaded = false, string exclude = null)
         {
             var links = new List<LoadedLink>();
             var linkTypes = new FilteredElementCollector(doc)
                 .OfClass(typeof(RevitLinkType))
                 .Cast<RevitLinkType>()
-                .Where(t => !t.IsNestedLink && Report.ChecklistCatalog.ContainsAny(t.Name, markers))
+                .Where(t => !t.IsNestedLink && Report.ChecklistCatalog.ContainsAny(t.Name, markers)
+                            && (exclude == null || t.Name.IndexOf(exclude, StringComparison.Ordinal) < 0))
                 .ToList();
             if (linkTypes.Count == 0)
             {
@@ -137,10 +141,10 @@ namespace TNovUtils.Checklist.Revit
                     }
                 }
 
-                // Выгруженную пользователем связь не загружаем; загружаем только после открытия её набора
+                // Выгруженную пользователем связь не загружаем (кроме loadUnloaded); загружаем после открытия её набора
                 if (!RevitLinkType.IsLoaded(doc, type.Id))
                 {
-                    string error = openedWorkset ? TryLoad(doc, type) : "связь выгружена";
+                    string error = openedWorkset || loadUnloaded ? TryLoad(doc, type) : "связь выгружена";
                     if (error != null)
                     {
                         log.AppendLine();

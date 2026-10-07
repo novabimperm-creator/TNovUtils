@@ -32,11 +32,7 @@ namespace TNovUtils.Issues.Commands
             }
 
             var ids = uidoc.Selection.GetElementIds()
-#if R2027
-                .Select(id => id.Value) // Revit 2024+: 64-битный ElementId.Value
-#else
                 .Select(id => id.LongValue())
-#endif
                 .ToList();
 
             if (ids.Count == 0)

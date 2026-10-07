@@ -29,6 +29,7 @@ namespace TNovUtils.Checklist.Checks
         public const int DwgCurrentViewOnlyNumber = Report.ChecklistCatalog.DwgCurrentViewOnlyNumber;
         public const int LevelNumberNumber = Report.ChecklistCatalog.LevelNumberNumber;
         public const int WallLightsObstructedNumber = Report.ChecklistCatalog.WallLightsObstructedNumber;
+        public const int TaskHolesNumber = Report.ChecklistCatalog.TaskHolesNumber;
 
         private static readonly JsonSerializerSettings SaveSettings = new JsonSerializerSettings { Formatting = Formatting.Indented };
 

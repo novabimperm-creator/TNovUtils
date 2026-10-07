@@ -3,7 +3,6 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:tnov="clr-namespace:TNovCommon;assembly=TNovCommon"
              xmlns:local="clr-namespace:TNovUtils.Checklist.UI"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Type=local:AutoCheckDetailViewModel}"
@@ -14,7 +13,7 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/TNovCommon;component/Styles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
-            <tnov:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
+            <local:LocalStringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
             <Style x:Key="UpdateButtonStyle" TargetType="Button">
                 <Setter Property="Background" Value="#1E2E26"/>
                 <Setter Property="Foreground" Value="White"/>

@@ -57,11 +57,7 @@ namespace TNovUtils.Issues.Revit
             _handler.Enqueue(action);
         }
 
-#if R2027
-        private static ElementId MakeElementId(long value) => new ElementId(value); // Revit 2024+: long-конструктор
-#else
-        private static ElementId MakeElementId(long value) => new ElementId(unchecked((int)value));
-#endif
+        private static ElementId MakeElementId(long value) => ToElementId(value);
 
         /// <summary>C6/M3: выделить элемент, открыть 3D-вид и подрезать его section box'ом
         /// (без изоляции) с запасом — чтобы рядом было видно ближайшее окружение.</summary>
@@ -164,11 +160,7 @@ namespace TNovUtils.Issues.Revit
                 var result = new List<long>();
                 if (uidoc != null)
                     foreach (var id in uidoc.Selection.GetElementIds())
-#if R2027
-                        result.Add(id.Value); // Revit 2024+: 64-битный ElementId
-#else
-                        result.Add(id.IntValue());
-#endif
+                        result.Add(id.LongValue());
                 onResult?.Invoke(result);
             });
         }

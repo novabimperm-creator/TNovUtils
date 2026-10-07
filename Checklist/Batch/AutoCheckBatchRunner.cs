@@ -25,7 +25,8 @@ namespace TNovUtils.Checklist.Batch
         {
             AutoCheckStore.RfCoordinationNumber,
             AutoCheckStore.PipeAccessoriesOverTraysNumber,
-            AutoCheckStore.WallLightsObstructedNumber
+            AutoCheckStore.WallLightsObstructedNumber,
+            AutoCheckStore.TaskHolesNumber
         };
 
         /// <param name="modelName">Имя центральной модели без расширения, запятые заменены пробелами.</param>

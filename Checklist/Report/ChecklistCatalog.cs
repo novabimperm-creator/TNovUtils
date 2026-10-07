@@ -64,6 +64,10 @@ namespace TNovUtils.Checklist.Report
         public static readonly string[] ElMarkers = { "-ЭЛ", "_ЭЛ" };
         // Связи с трубами, воздуховодами и лотками — для проверки светильников на стенах
         public static readonly string[] VkOvSsMarkers = { "-ВК", "_ВК", "-ОВ", "_ОВ", "-СС", "_СС" };
+        // Модели, в которые вставляются группы заданий на отверстия (бывший BIM-пункт holes-tasks-copies)
+        public static readonly string[] TaskHolesMarkers = { "-АР", "_АР", "-КР-", "_КР", "-КЖ-", "_КЖ", "-КЖ0", "-КЖ." };
+        // Связи заданий — как в TNovTasks (TasksMenu)
+        public static readonly string[] TaskLinkMarkers = { "Задани", "задани", "-ЗД", "_ЗД", "ЗАДАНИЕ" };
 
         // ---- Автопроверки: номера и названия (номера — ключи в autocheck.json) ----
         public const int GridsLevelsLinksNumber = 1;
@@ -81,6 +85,7 @@ namespace TNovUtils.Checklist.Report
         public const int DwgCurrentViewOnlyNumber = 13;
         public const int LevelNumberNumber = 14;
         public const int WallLightsObstructedNumber = 15;
+        public const int TaskHolesNumber = 16;
 
         public const string GridsLevelsLinksTitle = "Оси, уровни, связи";
         public const string AntiMirrorTitle = "Антизеркало";
@@ -97,6 +102,7 @@ namespace TNovUtils.Checklist.Report
         public const string DwgCurrentViewOnlyTitle = "Связи DWG вставлены с опцией Только текущий вид";
         public const string LevelNumberTitle = "Заполненность N_Эт.Номер";
         public const string WallLightsObstructedTitle = "Светильники на стенах не перекрыты трубами, воздуховодами и лотками";
+        public const string TaskHolesTitle = "Отверстия соответствуют актуальным заданиям";
 
         /// <summary>Те же правила, что в конструкторе CheckRegistry.</summary>
         public static readonly IReadOnlyList<AutoCheckDef> AutoChecks = new[]
@@ -115,7 +121,8 @@ namespace TNovUtils.Checklist.Report
             new AutoCheckDef(LevelNumberNumber, LevelNumberTitle, ArMarkers),
             new AutoCheckDef(AdskPostcheckNumber, AdskPostcheckTitle, VkOvMarkers),
             new AutoCheckDef(PipeAccessoriesOverTraysNumber, PipeAccessoriesOverTraysTitle, VkOvMarkers),
-            new AutoCheckDef(WallLightsObstructedNumber, WallLightsObstructedTitle, ElMarkers)
+            new AutoCheckDef(WallLightsObstructedNumber, WallLightsObstructedTitle, ElMarkers),
+            new AutoCheckDef(TaskHolesNumber, TaskHolesTitle, TaskHolesMarkers)
         };
 
         // ---- Допуски устаревания — как в окне Чек-листа ----
@@ -206,10 +213,7 @@ namespace TNovUtils.Checklist.Report
                 "-КР-", "_КР", "-КЖ-", "_КЖ", "-КЖ0", "-КЖ."),
             new BimCheckDef("holes-st",
                 "Проемы в стенах соответствуют КР",
-                "-АР-", "_АР"),
-            new BimCheckDef("holes-tasks-copies",
-                "Отверстия соответствуют актуальным заданиям, раскопированы по этажам и вырезаны (с полным прорезанием)",
-                "-АР", "_АР", "-КР-", "_КР", "-КЖ-", "_КЖ", "-КЖ0", "-КЖ.")
+                "-АР-", "_АР")
         };
 
         public static IEnumerable<AutoCheckDef> AutoChecksFor(string modelName) =>
