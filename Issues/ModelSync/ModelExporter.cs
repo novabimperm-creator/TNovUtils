@@ -669,7 +669,8 @@ namespace TNovUtils.Issues.ModelSync
         /// в удалённые.
         /// </summary>
         public static byte[] ExportElements(Document doc, ICollection<long> ids, ICollection<long> deleted,
-                                            IDictionary<string, int> counts, DateTime syncedAtUtc)
+                                            IDictionary<string, int> counts, DateTime syncedAtUtc,
+                                            ICollection<string> fullCategories = null)
         {
             if (doc == null) throw new ArgumentNullException(nameof(doc));
             PropertyCollector.ResetTypeCache();
@@ -690,15 +691,18 @@ namespace TNovUtils.Issues.ModelSync
                 }
                 AddProperties(properties, doc, el, id);
             }
-            var extra = new Dictionary<string, object>
+            var delta = new Dictionary<string, object>
             {
-                ["delta"] = new Dictionary<string, object>
-                {
-                    ["deleted"] = gone.ToArray(),
-                    ["syncedAt"] = syncedAtUtc.ToUniversalTime().ToString("o"),
-                    ["counts"] = counts,
-                },
+                ["deleted"] = gone.ToArray(),
+                ["syncedAt"] = syncedAtUtc.ToUniversalTime().ToString("o"),
+                ["counts"] = counts,
             };
+            // Самолечение «расходится с моделью» (2026-10-08): эти категории
+            // присланы ЦЕЛИКОМ — сайт снесёт у себя их элементы, которых в
+            // присланном наборе нет (следы правок с машин без плагина).
+            if (fullCategories != null && fullCategories.Count > 0)
+                delta["fullCategories"] = fullCategories.ToArray();
+            var extra = new Dictionary<string, object> { ["delta"] = delta };
             return BuildGlb(meshes, properties, null, extra);
         }
 

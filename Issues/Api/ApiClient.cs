@@ -353,34 +353,68 @@ namespace TNovUtils.Issues.Api
         }
 
         /// <summary>
-        /// Приращение синхронизации (.glb до 50 МБ телом запроса). false — документ
-        /// на сайт не загружен (404): не ошибка, просто этот проект не ведётся.
+        /// Итог синхронизации: принята ли (false — документ на сайт не загружен)
+        /// и какие категории по сверке сайта разошлись с моделью. Разошедшиеся
+        /// ModelSyncService досылает целиком при следующей синхронизации
+        /// (самолечение «расходится с моделью», 2026-10-08).
         /// </summary>
-        public async Task<bool> SyncModelAsync(string document, byte[] glb)
+        public sealed class SyncOutcome
+        {
+            public bool Loaded;
+            public HashSet<string> DriftCategories = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        private static SyncOutcome ParseSyncOutcome(string body)
+        {
+            var outcome = new SyncOutcome { Loaded = true };
+            try
+            {
+                var applied = JObject.Parse(body)["applied"] as JArray;
+                if (applied == null) return outcome;
+                foreach (var a in applied)
+                {
+                    var drift = a?["drift"] as JArray;
+                    if (drift == null) continue;
+                    foreach (var row in drift)
+                    {
+                        var cat = (string)row?["category"];
+                        if (!string.IsNullOrEmpty(cat)) outcome.DriftCategories.Add(cat);
+                    }
+                }
+            }
+            catch { /* сверка — не повод считать синхронизацию неудачной */ }
+            return outcome;
+        }
+
+        /// <summary>
+        /// Приращение синхронизации (.glb до 50 МБ телом запроса). Loaded=false —
+        /// документ на сайт не загружен (404): не ошибка, проект не ведётся.
+        /// </summary>
+        public async Task<SyncOutcome> SyncModelAsync(string document, byte[] glb)
         {
             try
             {
-                await SendAsync(() =>
+                var body = await SendAsync(() =>
                 {
                     var req = Make(HttpMethod.Post, "api/bim/sync?document=" + Q(document));
                     req.Content = new ByteArrayContent(glb);
                     req.Content.Headers.ContentType = new MediaTypeHeaderValue("model/gltf-binary");
                     return req;
                 });
-                return true;
+                return ParseSyncOutcome(body);
             }
-            catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.NotFound) { return false; }
+            catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.NotFound) { return new SyncOutcome { Loaded = false }; }
         }
 
         /// <summary>Большое приращение (изменили тип у тысяч элементов) — через загрузку частями.</summary>
-        public async Task<bool> SyncModelAsync(string document, string uploadId)
+        public async Task<SyncOutcome> SyncModelAsync(string document, string uploadId)
         {
             try
             {
-                await SendAsync(() => Make(HttpMethod.Post, "api/bim/sync", new { uploadId, document }));
-                return true;
+                var body = await SendAsync(() => Make(HttpMethod.Post, "api/bim/sync", new { uploadId, document }));
+                return ParseSyncOutcome(body);
             }
-            catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.NotFound) { return false; }
+            catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.NotFound) { return new SyncOutcome { Loaded = false }; }
         }
 
         /// <summary>Скачать байты по относительному url (фото/превью) с авто-refresh.</summary>

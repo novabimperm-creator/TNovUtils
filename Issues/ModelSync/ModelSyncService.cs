@@ -42,6 +42,10 @@ namespace TNovUtils.Issues.ModelSync
         {
             public HashSet<long> Changed = new HashSet<long>();
             public HashSet<long> Deleted = new HashSet<long>();
+            // Самолечение (2026-10-08): категории, которые по сверке сайта
+            // разошлись с моделью (ответ прошлой синхронизации). При следующей
+            // выгрузке уходят ЦЕЛИКОМ, и сайт сносит у себя лишнее.
+            public HashSet<string> Heal = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             public bool IsEmpty => Changed.Count == 0 && Deleted.Count == 0;
         }
 
@@ -165,6 +169,7 @@ namespace TNovUtils.Issues.ModelSync
                     {
                         Changed = new HashSet<long>(p.Changed),
                         Deleted = new HashSet<long>(p.Deleted),
+                        Heal = new HashSet<string>(p.Heal, StringComparer.OrdinalIgnoreCase),
                     };
                     Sending.Add(name);
                 }
@@ -172,11 +177,16 @@ namespace TNovUtils.Issues.ModelSync
                 try { Session.Client.RevitUser = doc.Application?.Username; } catch { }
                 var clock = Stopwatch.StartNew();
                 var changed = Expand(doc, snap.Changed);
+                // Самолечение: разъехавшиеся категории уходят целиком — сайт
+                // дополнит недостающее и снесёт у себя то, чего в модели нет.
+                if (snap.Heal.Count > 0) changed.UnionWith(CollectCategories(doc, snap.Heal));
                 var counts = ModelExporter.CountCategories(doc);
-                var glb = ModelExporter.ExportElements(doc, changed, snap.Deleted, counts, DateTime.UtcNow);
+                var glb = ModelExporter.ExportElements(doc, changed, snap.Deleted, counts, DateTime.UtcNow,
+                                                       snap.Heal.Count > 0 ? snap.Heal : null);
                 clock.Stop();
                 PluginLog.Write($"[ModelSync] {why} «{name}»: изменено {snap.Changed.Count}"
-                                + (changed.Count != snap.Changed.Count ? $" (с экземплярами типов {changed.Count})" : "")
+                                + (changed.Count != snap.Changed.Count ? $" (с экземплярами типов и лечением {changed.Count})" : "")
+                                + (snap.Heal.Count > 0 ? $", лечение [{string.Join(", ", snap.Heal)}]" : "")
                                 + $", удалено {snap.Deleted.Count}, {glb.Length / 1024} КБ, {clock.ElapsedMilliseconds} мс");
 
                 Task.Run(() => SendAsync(name, glb, snap));
@@ -192,10 +202,10 @@ namespace TNovUtils.Issues.ModelSync
         {
             try
             {
-                bool loaded;
+                ApiClient.SyncOutcome outcome;
                 if (glb.Length <= DirectLimit)
                 {
-                    loaded = await Session.Client.SyncModelAsync(name, glb);
+                    outcome = await Session.Client.SyncModelAsync(name, glb);
                 }
                 else
                 {
@@ -204,23 +214,30 @@ namespace TNovUtils.Issues.ModelSync
                     {
                         File.WriteAllBytes(tmp, glb);
                         var uploadId = await Session.Client.UploadChunkedAsync(tmp);
-                        loaded = await Session.Client.SyncModelAsync(name, uploadId);
+                        outcome = await Session.Client.SyncModelAsync(name, uploadId);
                     }
                     finally { try { File.Delete(tmp); } catch { } }
                 }
                 lock (Gate)
                 {
-                    if (!loaded) MarkNotLoaded(name);
+                    if (!outcome.Loaded) MarkNotLoaded(name);
                     // Убираем только отправленное: пока шла отправка, человек мог
                     // править дальше — это уйдёт со следующей синхронизацией.
                     var p = Get(name);
                     p.Changed.ExceptWith(sent.Changed);
                     p.Deleted.ExceptWith(sent.Deleted);
+                    // Лечение: отправленные категории — долечены; то, что сверка
+                    // нашла СЕЙЧАС, дошлём целиком при следующей синхронизации.
+                    p.Heal.ExceptWith(sent.Heal);
+                    if (outcome.Loaded) p.Heal.UnionWith(outcome.DriftCategories);
                     DeleteSaved(name);
+                    if (!p.IsEmpty || p.Heal.Count > 0) Save(name, p);
                 }
-                PluginLog.Write(loaded
-                    ? $"[ModelSync] «{name}»: сайт обновлён"
-                    : $"[ModelSync] «{name}»: проект не загружен на сайт — не синхронизируем");
+                PluginLog.Write(!outcome.Loaded
+                    ? $"[ModelSync] «{name}»: проект не загружен на сайт — не синхронизируем"
+                    : outcome.DriftCategories.Count > 0
+                        ? $"[ModelSync] «{name}»: сайт обновлён; расходится [{string.Join(", ", outcome.DriftCategories)}] — дошлём целиком при следующей синхронизации"
+                        : $"[ModelSync] «{name}»: сайт обновлён");
             }
             catch (Exception ex)
             {
@@ -232,6 +249,23 @@ namespace TNovUtils.Issues.ModelSync
             {
                 lock (Gate) Sending.Remove(name);
             }
+        }
+
+        /// <summary>
+        /// Все элементы перечисленных категорий (по имени, как в сверке) — для
+        /// самолечения: разъехавшаяся категория уходит на сайт целиком. Лишние
+        /// id не страшны: отбор IsAskCandidate в выгрузке общий.
+        /// </summary>
+        private static HashSet<long> CollectCategories(Document doc, ICollection<string> cats)
+        {
+            var result = new HashSet<long>();
+            var want = new HashSet<string>(cats, StringComparer.OrdinalIgnoreCase);
+            foreach (var el in new FilteredElementCollector(doc).WhereElementIsNotElementType())
+            {
+                var c = el.Category;
+                if (c != null && want.Contains(c.Name ?? "")) result.Add(el.Id.LongValue());
+            }
+            return result;
         }
 
         /// <summary>
@@ -328,6 +362,7 @@ namespace TNovUtils.Issues.ModelSync
             into.Changed.UnionWith(from.Changed);
             into.Deleted.UnionWith(from.Deleted);
             into.Changed.ExceptWith(into.Deleted);
+            into.Heal.UnionWith(from.Heal);
         }
 
         private static bool IsDetached(string name) =>
@@ -349,7 +384,7 @@ namespace TNovUtils.Issues.ModelSync
             {
                 var path = SavedPath(name);
                 Directory.CreateDirectory(Path.GetDirectoryName(path));
-                File.WriteAllText(path, JsonConvert.SerializeObject(new { document = name, changed = p.Changed, deleted = p.Deleted }));
+                File.WriteAllText(path, JsonConvert.SerializeObject(new { document = name, changed = p.Changed, deleted = p.Deleted, heal = p.Heal }));
             }
             catch (Exception ex) { PluginLog.Write("[ModelSync] сохранить неотправленное: " + ex.Message); }
         }
@@ -361,11 +396,12 @@ namespace TNovUtils.Issues.ModelSync
                 var path = SavedPath(name);
                 if (!File.Exists(path)) return null;
                 var s = JsonConvert.DeserializeAnonymousType(File.ReadAllText(path),
-                    new { document = "", changed = new long[0], deleted = new long[0] });
+                    new { document = "", changed = new long[0], deleted = new long[0], heal = new string[0] });
                 return new Pending
                 {
                     Changed = new HashSet<long>(s?.changed ?? new long[0]),
                     Deleted = new HashSet<long>(s?.deleted ?? new long[0]),
+                    Heal = new HashSet<string>(s?.heal ?? new string[0], StringComparer.OrdinalIgnoreCase),
                 };
             }
             catch { return null; }
