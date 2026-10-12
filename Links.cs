@@ -131,6 +131,11 @@ namespace TNovUtils
 
             List<Node> allNodes = GetAllNodes(viewModel.Nodes).ToList();
             string RSfilePath = TNovCommon.Server.ServerData.ReadAllText("RSpath.txt");
+            if (TNovCommon.Server.RevitServerRedirect.TryApply(RSfilePath, out string rsRedirected))
+            {
+                Logger.Log("Revit Server временно заменён (RSredirect.txt): " + RSfilePath.Trim() + " → " + rsRedirected, 2);
+                RSfilePath = rsRedirected;
+            }
             foreach (var node in allNodes)
             {
                 if (node.IsChecked && node.IsModel && node.IsLocked==false) 
