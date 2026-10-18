@@ -39,6 +39,7 @@ namespace TNovUtils.Issues.Commands
                 return Result.Cancelled;
             }
             if (RevitAPI.UiApplication == null) RevitAPI.Initialize(data);
+            if (!CorpGate.Require(TNovConfigLoad.GetCachedConfig())) return Result.Cancelled;
             TNovConfigLoad.LoadConfig("Загрузить проект в TNovPRO",
                 System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString());
 

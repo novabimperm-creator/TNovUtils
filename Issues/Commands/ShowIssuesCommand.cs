@@ -26,6 +26,7 @@ namespace TNovUtils.Issues.Commands
             // валидный API-контекст. Initialize идемпотентен.
             RevitBridge.Initialize();
             if (RevitAPI.UiApplication == null) RevitAPI.Initialize(commandData);
+            if (!CorpGate.Require(TNovConfigLoad.GetCachedConfig())) return Result.Cancelled;
 
             var uiapp = commandData.Application;
             var uidoc = uiapp.ActiveUIDocument;

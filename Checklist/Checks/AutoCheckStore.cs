@@ -30,6 +30,7 @@ namespace TNovUtils.Checklist.Checks
         public const int LevelNumberNumber = Report.ChecklistCatalog.LevelNumberNumber;
         public const int WallLightsObstructedNumber = Report.ChecklistCatalog.WallLightsObstructedNumber;
         public const int TaskHolesNumber = Report.ChecklistCatalog.TaskHolesNumber;
+        public const int GridsBasePointNumber = Report.ChecklistCatalog.GridsBasePointNumber;
 
         private static readonly JsonSerializerSettings SaveSettings = new JsonSerializerSettings { Formatting = Formatting.Indented };
 

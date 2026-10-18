@@ -53,10 +53,10 @@ namespace TNovUtils.Checklist.Report
     public static class ChecklistCatalog
     {
         // ---- Маркеры имени модели (используются и ModelNameRules для Document) ----
-        public static readonly string[] ArOrPofMarkers = { "-АР-", "_АР", "-ПОФ-", "_ПОФ" };
-        public static readonly string[] ArMarkers = { "-АР-", "_АР" };
-        public static readonly string[] RebarNoMarkMarkers = { "-КЖ-", "_КЖ", "-КР-", "_КР", "-АР-", "_АР" };
-        public static readonly string[] NoPartsMarkers = { "-АР-", "_АР", "-ПОФ-", "_ПОФ", "-КР-", "_КР", "-КЖ-", "_КЖ" };
+        public static readonly string[] ArOrPofMarkers = { "-АР", "_АР", "-ПОФ", "_ПОФ" };
+        public static readonly string[] ArMarkers = { "-АР", "_АР" };
+        public static readonly string[] RebarNoMarkMarkers = { "-КЖ", "_КЖ", "-КР", "_КР", "-АР", "_АР" };
+        public static readonly string[] NoPartsMarkers = { "-АР", "_АР", "-ПОФ", "_ПОФ", "-КР", "_КР", "-КЖ", "_КЖ" };
         // Маркеры ВК/ОВ — как у сценария ВК ОВ в MEPSpec (без ПТ и ТС)
         public static readonly string[] VkOvMarkers = { "-ВК", "_ВК", "-ОВ", "_ОВ" };
         // Связи с кабельными лотками — для проверки арматуры над лотками
@@ -65,7 +65,7 @@ namespace TNovUtils.Checklist.Report
         // Связи с трубами, воздуховодами и лотками — для проверки светильников на стенах
         public static readonly string[] VkOvSsMarkers = { "-ВК", "_ВК", "-ОВ", "_ОВ", "-СС", "_СС" };
         // Модели, в которые вставляются группы заданий на отверстия (бывший BIM-пункт holes-tasks-copies)
-        public static readonly string[] TaskHolesMarkers = { "-АР", "_АР", "-КР-", "_КР", "-КЖ-", "_КЖ", "-КЖ0", "-КЖ." };
+        public static readonly string[] TaskHolesMarkers = { "-АР", "_АР", "-КР", "_КР", "-КЖ", "_КЖ", "-КЖ0", "-КЖ." };
         // Связи заданий — как в TNovTasks (TasksMenu)
         public static readonly string[] TaskLinkMarkers = { "Задани", "задани", "-ЗД", "_ЗД", "ЗАДАНИЕ" };
 
@@ -86,6 +86,7 @@ namespace TNovUtils.Checklist.Report
         public const int LevelNumberNumber = 14;
         public const int WallLightsObstructedNumber = 15;
         public const int TaskHolesNumber = 16;
+        public const int GridsBasePointNumber = 17;
 
         public const string GridsLevelsLinksTitle = "Оси, уровни, связи";
         public const string AntiMirrorTitle = "Антизеркало";
@@ -103,6 +104,7 @@ namespace TNovUtils.Checklist.Report
         public const string LevelNumberTitle = "Заполненность N_Эт.Номер";
         public const string WallLightsObstructedTitle = "Светильники на стенах не перекрыты трубами, воздуховодами и лотками";
         public const string TaskHolesTitle = "Отверстия соответствуют актуальным заданиям";
+        public const string GridsBasePointTitle = "Оси А и 1 пересекаются в базовой точке";
 
         /// <summary>Те же правила, что в конструкторе CheckRegistry.</summary>
         public static readonly IReadOnlyList<AutoCheckDef> AutoChecks = new[]
@@ -119,6 +121,7 @@ namespace TNovUtils.Checklist.Report
             new AutoCheckDef(RoomDepartmentNumber, RoomDepartmentTitle, ArMarkers),
             new AutoCheckDef(WetRoomsOverElectricalNumber, WetRoomsOverElectricalTitle, ArMarkers),
             new AutoCheckDef(LevelNumberNumber, LevelNumberTitle, ArMarkers),
+            new AutoCheckDef(GridsBasePointNumber, GridsBasePointTitle, ArMarkers),
             new AutoCheckDef(AdskPostcheckNumber, AdskPostcheckTitle, VkOvMarkers),
             new AutoCheckDef(PipeAccessoriesOverTraysNumber, PipeAccessoriesOverTraysTitle, VkOvMarkers),
             new AutoCheckDef(WallLightsObstructedNumber, WallLightsObstructedTitle, ElMarkers),
@@ -132,9 +135,6 @@ namespace TNovUtils.Checklist.Report
         /// <summary>BIM-проверки (ручной чек-лист). Порядок — как в окне Чек-листа.</summary>
         public static readonly IReadOnlyList<BimCheckDef> BimChecks = new[]
         {
-            new BimCheckDef("axes-base-point",
-                "Оси А и 1 пересекаются в базовой точке",
-                "-АР", "_АР"),
             new BimCheckDef("floors-on-levels",
                 "Уровни выставлены по верху жб плит перекрытий",
                 "-АР", "_АР"),

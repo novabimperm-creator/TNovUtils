@@ -24,7 +24,7 @@ namespace TNovUtils.Checklist.Commands
             TNovConfig config = TNovConfigLoad.LoadConfig();
             if (config == null) return Result.Failed;
 
-            if (config.LicenseType != "corp")
+            if (!CorpGate.IsCorp(config))
             {
                 new InfoWindow280("Отчет доступен только для корпоративной лицензии: журнал синхронизаций ведётся только в ней.").ShowDialog();
                 return Result.Cancelled;

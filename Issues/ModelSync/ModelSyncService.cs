@@ -63,11 +63,10 @@ namespace TNovUtils.Issues.ModelSync
         private static ApiSession Session => IssuesHost.Session;
 
         /// <summary>
-        /// Можно ли отправлять: есть ключ синхронизации с папки раздачи или человек
-        /// хоть раз входил в TNovPRO. Ни того, ни другого — молчим.
+        /// Можно ли отправлять: только корпоративная конфигурация TNov. В личной (вне сети
+        /// компании) модели на сайт не уходят, даже если человек входил в TNovPRO.
         /// </summary>
-        private static bool CanSend => _corporate || !string.IsNullOrEmpty(_syncKey)
-                                       || Session.Tokens.HasRefresh || !string.IsNullOrEmpty(Session.Tokens.AccessToken);
+        private static bool CanSend => _corporate;
 
         private static string _syncKey;
         // Корпоративная установка TNov: из сети компании сайт принимает синхронизацию
