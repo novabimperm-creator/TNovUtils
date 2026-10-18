@@ -48,9 +48,10 @@
     <None Include="LevelMover\**\*" Exclude="LevelMover\**\bin\**;LevelMover\**\obj\**;LevelMover\src\LevelMover\**\*.cs;LevelMover\src\LevelMover\**\*.xaml" />
   </ItemGroup>
 
-  <!-- ===== Версионирование ===== -->
-  <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
-    <Exec Command="powershell -ExecutionPolicy Bypass -File &quot;$(ProjectDir)UpdateVersion.ps1&quot;" />
-  </Target>
+  <!-- ===== Версионирование =====
+       Версия 3.гг.ММдд.минуты генерируется при сборке в obj (TNovGenerateVersionInfo в TNovDeploy\TNov.Build.props). -->
+  <PropertyGroup>
+    <TNovMajorVersion>3</TNovMajorVersion>
+  </PropertyGroup>
 
 </Project>
