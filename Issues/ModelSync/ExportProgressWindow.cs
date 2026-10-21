@@ -45,7 +45,8 @@ namespace TNovUtils.Issues.ModelSync
         public bool CancelRequested => _cancelRequested;
         public TimeSpan Elapsed => DateTime.Now - _started;
 
-        public ExportProgressWindow(string title, IntPtr revitWindow)
+        /// <param name="cancelText">надпись кнопки; по умолчанию — про выгрузку</param>
+        public ExportProgressWindow(string title, IntPtr revitWindow, string cancelText = null)
         {
             Title = title;
             Width = 580;
@@ -88,7 +89,7 @@ namespace TNovUtils.Issues.ModelSync
             };
             _cancel = new Button
             {
-                Content = "Прервать и сохранить собранное",
+                Content = cancelText ?? "Прервать и сохранить собранное",
                 Padding = new Thickness(14, 6, 14, 6),
                 HorizontalAlignment = HorizontalAlignment.Right,
             };

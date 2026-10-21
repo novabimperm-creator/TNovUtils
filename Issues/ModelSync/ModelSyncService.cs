@@ -18,18 +18,31 @@ using TNovUtils.Issues.UI;
 namespace TNovUtils.Issues.ModelSync
 {
     /// <summary>
-    /// «Модель» TNovPRO: сайт обновляется при каждой синхронизации с центральной
-    /// моделью (решение Виктора 2026-09-28, без ночных выгрузок).
+    /// «Модель» TNovPRO: сайт обновляется по синхронизациям с центральной моделью
+    /// (решение Виктора 2026-09-28, без ночных выгрузок).
     ///
-    /// Всё время копим id изменённых и удалённых элементов (DocumentChanged — только
-    /// множества чисел, без чтения элементов). После синхронизации выгружаем ИХ
-    /// (паспорт + геометрия) и сверочные цифры по категориям и отправляем в фоне.
-    /// Не ушло (нет сети, истёк вход) — остаётся на диске и уходит со следующей
-    /// синхронизацией. Проекты, которых нет на сайте, не трогаем вовсе.
+    /// Правило отправки — «по последней синхронизации» (решение Виктора 2026-10-21):
+    /// сайт получает состояние модели, когда после последней синхронизации прошёл
+    /// ЧАС без новых. Поэтому работа разбита на два шага.
+    ///
+    ///  1. ВЫГРУЗКА при каждой синхронизации (в контексте Revit API): копим id
+    ///     изменённых и удалённых (DocumentChanged — только множества чисел), после
+    ///     синхронизации выгружаем ИХ (паспорт + геометрия) со сверочными цифрами
+    ///     по категориям и кладём приращение в очередь НА ДИСК. Ровно в этот момент
+    ///     локальная копия равна центральной — позже из документа читать нельзя:
+    ///     утащим правки, которые человек не синхронизировал и отбросил.
+    ///  2. ОТПРАВКА в фоне, без Revit API: когда после последней выгрузки прошёл час
+    ///     без новых (<see cref="IdleDelay"/>), либо при закрытии документа (ждать час
+    ///     после выхода из Revit некому), либо при следующем запуске Revit — если
+    ///     очередь осталась с прошлого раза. Приращения уходят по порядку, сервер
+    ///     применяет «новее побеждает»; итог на сайте — состояние последней
+    ///     синхронизации. Не ушло (нет сети, истёк вход) — очередь ждёт следующей
+    ///     попытки. Проекты, которых нет на сайте, не трогаем вовсе.
     ///
     /// Подключение — в TNov/Application.cs: DocumentChanged → <see cref="OnDocumentChanged"/>,
     /// DocumentSynchronizedWithCentral → <see cref="OnSynchronized"/>,
-    /// DocumentSaved (файл без совместной работы) → <see cref="OnSaved"/>.
+    /// DocumentSaved (файл без совместной работы) → <see cref="OnSaved"/>,
+    /// DocumentClosing → <see cref="OnClosing"/>.
     /// Контракт с сайтом — doc/BIM-ASK-SYNC.md в репозитории TNovPRO.
     /// </summary>
     public static class ModelSyncService
@@ -37,16 +50,30 @@ namespace TNovUtils.Issues.ModelSync
         // Больше — через загрузку частями: у сервера предел тела запроса 50 МБ.
         private const int DirectLimit = 45 * 1024 * 1024;
         private static readonly TimeSpan LoadedTtl = TimeSpan.FromMinutes(10);
+        // Через сколько после последней синхронизации отправлять. Для проверки — TNOVPRO_SYNC_IDLE_MINUTES.
+        private static readonly TimeSpan IdleDelay = ReadIdleDelay();
+        // После неудачной отправки (нет сети) — не долбить сервер каждую минуту.
+        private static readonly TimeSpan RetryDelay = TimeSpan.FromMinutes(5);
+        private static readonly TimeSpan ScanPeriod = TimeSpan.FromMinutes(1);
 
         private sealed class Pending
         {
             public HashSet<long> Changed = new HashSet<long>();
             public HashSet<long> Deleted = new HashSet<long>();
             // Самолечение (2026-10-08): категории, которые по сверке сайта
-            // разошлись с моделью (ответ прошлой синхронизации). При следующей
+            // разошлись с моделью (ответ прошлой отправки). При следующей
             // выгрузке уходят ЦЕЛИКОМ, и сайт сносит у себя лишнее.
             public HashSet<string> Heal = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             public bool IsEmpty => Changed.Count == 0 && Deleted.Count == 0;
+        }
+
+        /// <summary>Что лежит в очереди документа (state.json рядом с приращениями).</summary>
+        private sealed class QueueState
+        {
+            public string Document;
+            public string RevitUser;
+            public DateTime LastStagedUtc;
+            public DateTime LastAttemptUtc;
         }
 
         private static readonly object Gate = new object();
@@ -59,6 +86,7 @@ namespace TNovUtils.Issues.ModelSync
         private static HashSet<string> _loaded;
         private static DateTime _loadedAt = DateTime.MinValue;
         private static bool _refreshing;
+        private static bool _scanning;
 
         private static ApiSession Session => IssuesHost.Session;
 
@@ -73,16 +101,31 @@ namespace TNovUtils.Issues.ModelSync
         // без входа и без ключа (решение Виктора: «при входе в модель автоматически»).
         private static bool _corporate;
 
+        private static TimeSpan ReadIdleDelay()
+        {
+            try
+            {
+                var v = Environment.GetEnvironmentVariable("TNOVPRO_SYNC_IDLE_MINUTES");
+                if (!string.IsNullOrWhiteSpace(v) && double.TryParse(v, System.Globalization.NumberStyles.Any,
+                        System.Globalization.CultureInfo.InvariantCulture, out var minutes) && minutes >= 0)
+                    return TimeSpan.FromMinutes(minutes);
+            }
+            catch { }
+            return TimeSpan.FromHours(1);
+        }
+
         /// <summary>
         /// Вызывается из TNov при запуске Revit. Ключ синхронизации — файл
         /// «tnovpro\sync-key.txt» на корпоративной папке раздачи TNov (serverPath),
         /// а не в коде: репозитории плагина публичные. Для отладки — переменная
         /// TNOVPRO_SYNC_KEY. Читается в фоне: сетевая папка может отвечать секундами.
+        /// Здесь же стартует фоновый обход очередей: отправка по часу тишины и
+        /// досылка того, что осталось с прошлого запуска Revit.
         /// </summary>
         public static void Configure(string serverPath)
         {
             _corporate = !string.IsNullOrEmpty(serverPath);
-            Task.Run(() =>
+            Task.Run(async () =>
             {
                 try
                 {
@@ -93,12 +136,25 @@ namespace TNovUtils.Issues.ModelSync
                         if (File.Exists(file)) key = File.ReadAllText(file);
                     }
                     key = key?.Trim();
-                    if (string.IsNullOrEmpty(key)) return;
-                    _syncKey = key;
-                    Session.Client.SyncKey = key;
-                    PluginLog.Write("[ModelSync] ключ синхронизации найден — синхронизация без входа включена");
+                    if (!string.IsNullOrEmpty(key))
+                    {
+                        _syncKey = key;
+                        Session.Client.SyncKey = key;
+                        PluginLog.Write("[ModelSync] ключ синхронизации найден — синхронизация без входа включена");
+                    }
                 }
                 catch (Exception ex) { PluginLog.Write("[ModelSync] ключ синхронизации: " + ex.Message); }
+
+                if (!CanSend) return;
+                PluginLog.Write($"[ModelSync] отправка — через {IdleDelay.TotalMinutes:N0} мин после последней синхронизации");
+                // Очереди прошлого запуска — не раньше чем через полминуты: Revit ещё поднимается.
+                await Task.Delay(TimeSpan.FromSeconds(30));
+                for (;;)
+                {
+                    try { await ScanQueuesAsync(); }
+                    catch (Exception ex) { PluginLog.Write("[ModelSync] обход очередей: " + ex.Message); }
+                    await Task.Delay(ScanPeriod);
+                }
             });
         }
 
@@ -135,25 +191,45 @@ namespace TNovUtils.Issues.ModelSync
         }
 
         /// <summary>После «Синхронизировать с центральной моделью».</summary>
-        public static void OnSynchronized(Document doc) => Flush(doc, "синхронизация");
+        public static void OnSynchronized(Document doc) => Stage(doc, "синхронизация");
 
         /// <summary>Файл без совместной работы: сохранение — то же, что синхронизация.</summary>
         public static void OnSaved(Document doc)
         {
             if (doc == null || doc.IsWorkshared) return;
-            Flush(doc, "сохранение");
+            Stage(doc, "сохранение");
         }
 
         /// <summary>
-        /// Выгрузить накопленное и отправить. Вызывается в контексте Revit API
-        /// (обработчик события): чтение модели — здесь, сеть — в фоне.
+        /// Документ закрывают: ждать час после выхода из Revit некому — очередь
+        /// уходит сейчас (в фоне; не успеет до выхода — доедет при следующем запуске).
+        /// Документ при этом не читаем: что не синхронизировано, того на сайте и не должно быть.
         /// </summary>
-        private static void Flush(Document doc, string why)
+        public static void OnClosing(Document doc)
         {
             try
             {
                 if (doc == null || doc.IsFamilyDocument || doc.IsLinked) return;
                 var name = ModelExporter.DocumentName(doc);
+                if (IsDetached(name) || !CanSend) return;
+                if (QueuedFiles(name).Length == 0) return;
+                PluginLog.Write($"[ModelSync] «{name}»: документ закрывают — отправляю накопленное");
+                Task.Run(() => SendQueuedAsync(name));
+            }
+            catch (Exception ex) { PluginLog.Write("[ModelSync] закрытие документа: " + ex.Message); }
+        }
+
+        /// <summary>
+        /// Выгрузить накопленное в очередь. Вызывается в контексте Revit API
+        /// (обработчик события): чтение модели — здесь, сеть — потом и в фоне.
+        /// </summary>
+        private static void Stage(Document doc, string why)
+        {
+            string name = null;
+            try
+            {
+                if (doc == null || doc.IsFamilyDocument || doc.IsLinked) return;
+                name = ModelExporter.DocumentName(doc);
                 if (IsDetached(name)) return;
                 if (IsKnownNotLoaded(name)) { Drop(name); return; }
                 if (!CanSend) { Drop(name); return; }
@@ -161,19 +237,23 @@ namespace TNovUtils.Issues.ModelSync
                 Pending snap;
                 lock (Gate)
                 {
-                    if (Sending.Contains(name)) return;   // прошлая отправка ещё идёт — доедет со следующей
                     var p = Get(name);
                     Merge(p, LoadSaved(name));
+                    if (p.IsEmpty && p.Heal.Count == 0)
+                    {
+                        // Нечего выгружать, но синхронизация была: сдвигаем «час тишины»,
+                        // чтобы отправка шла по ПОСЛЕДНЕЙ синхронизации, а не по последней правке.
+                        TouchState(name, doc);
+                        return;
+                    }
                     snap = new Pending
                     {
                         Changed = new HashSet<long>(p.Changed),
                         Deleted = new HashSet<long>(p.Deleted),
                         Heal = new HashSet<string>(p.Heal, StringComparer.OrdinalIgnoreCase),
                     };
-                    Sending.Add(name);
                 }
 
-                try { Session.Client.RevitUser = doc.Application?.Username; } catch { }
                 var clock = Stopwatch.StartNew();
                 var changed = Expand(doc, snap.Changed);
                 // Самолечение: разъехавшиеся категории уходят целиком — сайт
@@ -183,66 +263,126 @@ namespace TNovUtils.Issues.ModelSync
                 var glb = ModelExporter.ExportElements(doc, changed, snap.Deleted, counts, DateTime.UtcNow,
                                                        snap.Heal.Count > 0 ? snap.Heal : null);
                 clock.Stop();
+
+                var file = Enqueue(name, glb);
+                lock (Gate)
+                {
+                    // Убираем только выгруженное: правки после этой синхронизации — в следующую.
+                    var p = Get(name);
+                    p.Changed.ExceptWith(snap.Changed);
+                    p.Deleted.ExceptWith(snap.Deleted);
+                    p.Heal.ExceptWith(snap.Heal);
+                    DeleteSaved(name);
+                    if (!p.IsEmpty || p.Heal.Count > 0) Save(name, p);
+                }
+                TouchState(name, doc);
                 PluginLog.Write($"[ModelSync] {why} «{name}»: изменено {snap.Changed.Count}"
                                 + (changed.Count != snap.Changed.Count ? $" (с экземплярами типов и лечением {changed.Count})" : "")
                                 + (snap.Heal.Count > 0 ? $", лечение [{string.Join(", ", snap.Heal)}]" : "")
-                                + $", удалено {snap.Deleted.Count}, {glb.Length / 1024} КБ, {clock.ElapsedMilliseconds} мс");
-
-                Task.Run(() => SendAsync(name, glb, snap));
+                                + $", удалено {snap.Deleted.Count}, {glb.Length / 1024} КБ, {clock.ElapsedMilliseconds} мс"
+                                + $" — в очередь ({Path.GetFileName(file)}), на сайт через {IdleDelay.TotalMinutes:N0} мин после последней синхронизации");
             }
             catch (Exception ex)
             {
                 PluginLog.Write("[ModelSync] выгрузка: " + ex);
-                lock (Gate) Sending.Remove(ModelExporter.DocumentName(doc));
+                // Не выгрузилось — id остаются в накопленном и уйдут со следующей синхронизацией.
+                if (name != null) lock (Gate) Save(name, Get(name));
             }
         }
 
-        private static async Task SendAsync(string name, byte[] glb, Pending sent)
+        // ── Отправка очереди ─────────────────────────────────────────────────
+
+        /// <summary>Фоновый обход: чьи очереди созрели (час тишины) — те отправляем.</summary>
+        private static async Task ScanQueuesAsync()
         {
+            lock (Gate)
+            {
+                if (_scanning) return;
+                _scanning = true;
+            }
             try
             {
-                ApiClient.SyncOutcome outcome;
-                if (glb.Length <= DirectLimit)
+                var root = QueueRoot();
+                if (!Directory.Exists(root)) return;
+                foreach (var dir in Directory.GetDirectories(root))
                 {
-                    outcome = await Session.Client.SyncModelAsync(name, glb);
+                    QueueState state;
+                    try { state = LoadState(dir); } catch { continue; }
+                    if (state == null || string.IsNullOrEmpty(state.Document)) continue;
+                    if (QueuedFiles(state.Document).Length == 0) continue;
+                    var now = DateTime.UtcNow;
+                    if (now - state.LastStagedUtc < IdleDelay) continue;
+                    if (now - state.LastAttemptUtc < RetryDelay) continue;
+                    await SendQueuedAsync(state.Document);
                 }
-                else
+            }
+            finally
+            {
+                lock (Gate) _scanning = false;
+            }
+        }
+
+        /// <summary>Отправить все приращения документа по порядку. Без Revit API — только файлы и сеть.</summary>
+        private static async Task SendQueuedAsync(string name)
+        {
+            lock (Gate)
+            {
+                if (Sending.Contains(name)) return;   // уже идёт
+                Sending.Add(name);
+            }
+            try
+            {
+                var state = LoadState(QueueDir(name)) ?? new QueueState { Document = name };
+                state.LastAttemptUtc = DateTime.UtcNow;
+                SaveState(name, state);
+                try { Session.Client.RevitUser = state.RevitUser; } catch { }
+
+                var files = QueuedFiles(name);
+                int sent = 0;
+                ApiClient.SyncOutcome last = null;
+                foreach (var file in files)
                 {
-                    var tmp = Path.Combine(Path.GetTempPath(), "tnovpro-sync-" + Guid.NewGuid().ToString("N") + ".glb");
-                    try
+                    ApiClient.SyncOutcome outcome;
+                    var glb = File.ReadAllBytes(file);
+                    if (glb.Length <= DirectLimit)
                     {
-                        File.WriteAllBytes(tmp, glb);
-                        var uploadId = await Session.Client.UploadChunkedAsync(tmp);
+                        outcome = await Session.Client.SyncModelAsync(name, glb);
+                    }
+                    else
+                    {
+                        var uploadId = await Session.Client.UploadChunkedAsync(file);
                         outcome = await Session.Client.SyncModelAsync(name, uploadId);
                     }
-                    finally { try { File.Delete(tmp); } catch { } }
+                    if (!outcome.Loaded)
+                    {
+                        // Проект на сайт не загружен — очередь ему не нужна.
+                        lock (Gate) MarkNotLoaded(name);
+                        foreach (var f in files) TryDelete(f);
+                        PluginLog.Write($"[ModelSync] «{name}»: проект не загружен на сайт — не синхронизируем");
+                        return;
+                    }
+                    TryDelete(file);
+                    sent++;
+                    last = outcome;
                 }
-                lock (Gate)
+                if (last != null)
                 {
-                    if (!outcome.Loaded) MarkNotLoaded(name);
-                    // Убираем только отправленное: пока шла отправка, человек мог
-                    // править дальше — это уйдёт со следующей синхронизацией.
-                    var p = Get(name);
-                    p.Changed.ExceptWith(sent.Changed);
-                    p.Deleted.ExceptWith(sent.Deleted);
-                    // Лечение: отправленные категории — долечены; то, что сверка
-                    // нашла СЕЙЧАС, дошлём целиком при следующей синхронизации.
-                    p.Heal.ExceptWith(sent.Heal);
-                    if (outcome.Loaded) p.Heal.UnionWith(outcome.DriftCategories);
-                    DeleteSaved(name);
-                    if (!p.IsEmpty || p.Heal.Count > 0) Save(name, p);
+                    lock (Gate)
+                    {
+                        // Что сверка нашла СЕЙЧАС — дошлём целиком при следующей синхронизации.
+                        var p = Get(name);
+                        p.Heal.UnionWith(last.DriftCategories);
+                        if (!p.IsEmpty || p.Heal.Count > 0) Save(name, p);
+                    }
+                    PluginLog.Write(last.DriftCategories.Count > 0
+                        ? $"[ModelSync] «{name}»: сайт обновлён ({sent} прир.); расходится [{string.Join(", ", last.DriftCategories)}] — дошлём целиком при следующей синхронизации"
+                        : $"[ModelSync] «{name}»: сайт обновлён ({sent} прир.)");
                 }
-                PluginLog.Write(!outcome.Loaded
-                    ? $"[ModelSync] «{name}»: проект не загружен на сайт — не синхронизируем"
-                    : outcome.DriftCategories.Count > 0
-                        ? $"[ModelSync] «{name}»: сайт обновлён; расходится [{string.Join(", ", outcome.DriftCategories)}] — дошлём целиком при следующей синхронизации"
-                        : $"[ModelSync] «{name}»: сайт обновлён");
             }
             catch (Exception ex)
             {
-                // Нет сети, истёк вход — не теряем: на диск, уйдёт со следующей синхронизацией.
-                PluginLog.Write($"[ModelSync] «{name}»: не отправлено ({ex.Message}) — отправим со следующей синхронизацией");
-                lock (Gate) Save(name, Get(name));
+                // Нет сети, истёк вход — не теряем: очередь на диске, попробуем позже.
+                PluginLog.Write($"[ModelSync] «{name}»: не отправлено ({ex.Message}) — повторим через {RetryDelay.TotalMinutes:N0} мин");
             }
             finally
             {
@@ -367,16 +507,20 @@ namespace TNovUtils.Issues.ModelSync
         private static bool IsDetached(string name) =>
             string.IsNullOrEmpty(name) || name.IndexOf("отсоединено", StringComparison.OrdinalIgnoreCase) >= 0;
 
-        private static string SavedPath(string name)
+        private static string Hash(string name)
         {
             using (var sha = SHA1.Create())
             {
-                var hash = BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(name.ToLowerInvariant())))
-                                       .Replace("-", "").Substring(0, 16);
-                return Path.Combine(PluginConfig.DataDir, "model-sync", hash + ".json");
+                return BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(name.ToLowerInvariant())))
+                                   .Replace("-", "").Substring(0, 16);
             }
         }
 
+        private static string QueueRoot() => Path.Combine(PluginConfig.DataDir, "model-sync");
+        private static string SavedPath(string name) => Path.Combine(QueueRoot(), Hash(name) + ".json");
+        private static string QueueDir(string name) => Path.Combine(QueueRoot(), Hash(name));
+
+        /// <summary>Накопленные id (ещё не выгруженные) — на случай падения Revit между правками.</summary>
         private static void Save(string name, Pending p)
         {
             try
@@ -385,7 +529,7 @@ namespace TNovUtils.Issues.ModelSync
                 Directory.CreateDirectory(Path.GetDirectoryName(path));
                 File.WriteAllText(path, JsonConvert.SerializeObject(new { document = name, changed = p.Changed, deleted = p.Deleted, heal = p.Heal }));
             }
-            catch (Exception ex) { PluginLog.Write("[ModelSync] сохранить неотправленное: " + ex.Message); }
+            catch (Exception ex) { PluginLog.Write("[ModelSync] сохранить накопленное: " + ex.Message); }
         }
 
         private static Pending LoadSaved(string name)
@@ -409,6 +553,64 @@ namespace TNovUtils.Issues.ModelSync
         private static void DeleteSaved(string name)
         {
             try { File.Delete(SavedPath(name)); } catch { }
+        }
+
+        // ── Очередь приращений на диске ─────────────────────────────────────
+
+        /// <summary>Положить приращение в очередь документа; имя файла — время, порядок отправки по нему.</summary>
+        private static string Enqueue(string name, byte[] glb)
+        {
+            var dir = QueueDir(name);
+            Directory.CreateDirectory(dir);
+            var file = Path.Combine(dir, DateTime.UtcNow.ToString("yyyyMMdd-HHmmss-fff") + ".glb");
+            var tmp = file + ".part";
+            File.WriteAllBytes(tmp, glb);
+            File.Move(tmp, file);   // обход очереди не подхватит недописанный файл
+            return file;
+        }
+
+        private static string[] QueuedFiles(string name)
+        {
+            try
+            {
+                var dir = QueueDir(name);
+                if (!Directory.Exists(dir)) return new string[0];
+                return Directory.GetFiles(dir, "*.glb").OrderBy(f => f, StringComparer.Ordinal).ToArray();
+            }
+            catch { return new string[0]; }
+        }
+
+        /// <summary>Отметить время последней синхронизации документа — от него считается час тишины.</summary>
+        private static void TouchState(string name, Document doc)
+        {
+            try
+            {
+                var state = LoadState(QueueDir(name)) ?? new QueueState { Document = name };
+                state.Document = name;
+                state.LastStagedUtc = DateTime.UtcNow;
+                try { state.RevitUser = doc?.Application?.Username; } catch { }
+                SaveState(name, state);
+            }
+            catch (Exception ex) { PluginLog.Write("[ModelSync] состояние очереди: " + ex.Message); }
+        }
+
+        private static void SaveState(string name, QueueState state)
+        {
+            var dir = QueueDir(name);
+            Directory.CreateDirectory(dir);
+            File.WriteAllText(Path.Combine(dir, "state.json"), JsonConvert.SerializeObject(state));
+        }
+
+        private static QueueState LoadState(string dir)
+        {
+            var path = Path.Combine(dir, "state.json");
+            if (!File.Exists(path)) return null;
+            return JsonConvert.DeserializeObject<QueueState>(File.ReadAllText(path));
+        }
+
+        private static void TryDelete(string path)
+        {
+            try { if (File.Exists(path)) File.Delete(path); } catch { }
         }
     }
 }

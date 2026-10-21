@@ -18,9 +18,15 @@ using TNovUtils.Issues.UI;
 namespace TNovUtils.Issues.Commands
 {
     /// <summary>
-    /// «Загрузить проект в TNovPRO» — один раз выгрузить дом целиком (сводный файл
-    /// и выбранные связи) во вкладку «Модель» сайта. Дальше сайт обновляется сам
-    /// при каждой синхронизации (<see cref="ModelSyncService"/>).
+    /// «TNovPRO Модель» — ОДНА кнопка на дом (решение Виктора 2026-10-21): один раз
+    /// выгрузить дом целиком (сводный файл и выбранные связи) в «Модель» сайта.
+    /// Дальше сайт обновляется сам по синхронизациям (<see cref="ModelSyncService"/>),
+    /// а из «Модели» сервер сам собирает Атлас для браузера и считает смету Афины —
+    /// отдельных кнопок выгрузки больше нет.
+    ///
+    /// Вход в TNovPRO — здесь же, через браузер: ждём под окном с «Отмена», чтобы
+    /// Revit не «висел на авторизации» (у руководителя 10.2026 вход висел: ожидание
+    /// сети шло на потоке Revit без окна).
     ///
     /// Кнопка ленты объявляется в TNov/Application.cs рядом с «Вопросами».
     /// </summary>
@@ -51,16 +57,19 @@ namespace TNovUtils.Issues.Commands
                 return Result.Cancelled;
             }
 
-            // Вход — тот же, что у «Вопросов». Без него дальше идти бессмысленно:
-            // дом выгружается минутами, а отправить его будет некуда.
+            // Вход — тот же, что у «Вопросов», но прямо отсюда. Без него дальше идти
+            // бессмысленно: дом выгружается минутами, а отправить его будет некуда.
             var session = IssuesHost.Session;
-            if (!RunBlocking(() => session.TryRestoreSessionAsync(), out bool signedIn) || !signedIn)
+            var signedIn = SignIn(session, uiapp.MainWindowHandle);
+            if (signedIn == null) return Result.Cancelled;
+            if (signedIn == false)
             {
-                new InfoWindow400("Нет входа в TNovPRO. Откройте «TNovPRO Вопросы», войдите и повторите.").ShowDialog();
+                new InfoWindow400("Войти в TNovPRO не удалось. Проверьте связь с сайтом и повторите — " +
+                                  "вход откроется в браузере.").ShowDialog();
                 return Result.Cancelled;
             }
 
-            // Имя дома — как у выгрузки для Атласа: шифр до первого «_».
+            // Имя дома — шифр до первого «_».
             var modelName = document.Split('_')[0].Trim();
 
             try
@@ -72,11 +81,12 @@ namespace TNovUtils.Issues.Commands
 
                 var confirm = new TaskDialog("Загрузить проект в TNovPRO")
                 {
-                    MainInstruction = $"Загрузить «{modelName}» во вкладку «Модель»?",
+                    MainInstruction = $"Загрузить «{modelName}» в «Модель»?",
                     MainContent = $"Разделы: {ModelLinks.SectionOf(document)}"
                                   + (chosen.Count > 0 ? ", " + string.Join(", ", chosen.Select(c => c.Section)) : "") + ".\n\n"
                                   + "Дом выгружается и отправляется по разделам — на большом проекте это минуты. "
-                                  + "Дальше сайт обновляется сам при каждой синхронизации с центральной моделью.",
+                                  + "Дальше сайт обновляется сам: через час после последней синхронизации с центральной моделью. "
+                                  + "Из «Модели» собираются Атлас и смета Афины — отдельно их выгружать не нужно.",
                     CommonButtons = TaskDialogCommonButtons.Yes | TaskDialogCommonButtons.No,
                     DefaultButton = TaskDialogResult.Yes,
                 };
@@ -156,13 +166,13 @@ namespace TNovUtils.Issues.Commands
                         ? $"Прервано — отправлено разделов: {sections}"
                         : "Отправлено — сайт раскладывает модель",
                     MainContent = $"«{modelName}»: разделов {sections}, элементов {elementsTotal:N0}, {clock.Elapsed.TotalMinutes:N1} мин.\n"
-                                  + "Через пару минут модель появится на сайте: «Проекты» → «Модель».\n\n" + report,
+                                  + "Через пару минут модель появится на сайте («Модель»), Атлас соберётся следом.\n\n" + report,
                 }.Show();
                 return Result.Succeeded;
             }
             catch (AuthRequiredException)
             {
-                new InfoWindow400("Вход в TNovPRO истёк. Откройте «TNovPRO Вопросы», войдите и повторите.").ShowDialog();
+                new InfoWindow400("Вход в TNovPRO истёк. Нажмите кнопку ещё раз — вход откроется в браузере.").ShowDialog();
                 return Result.Cancelled;
             }
             catch (ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Forbidden)
@@ -178,11 +188,46 @@ namespace TNovUtils.Issues.Commands
             }
         }
 
-        private static bool RunBlocking<T>(Func<Task<T>> work, out T value)
+        /// <summary>
+        /// Войти в TNovPRO: сначала тихо по сохранённому входу, иначе — через браузер.
+        /// Ожидание — под окном с «Отмена», очередь сообщений крутится: поток Revit
+        /// не блокируется ни на сети, ни на человеке, который ищет окно браузера.
+        /// true — вошли; false — не вышло; null — человек отменил.
+        /// </summary>
+        private static bool? SignIn(ApiSession session, IntPtr revitWindow)
         {
-            value = default(T);
-            try { value = Task.Run(work).GetAwaiter().GetResult(); return true; }
-            catch (Exception ex) { PluginLog.Write("[UploadProject] вход: " + ex.Message); return false; }
+            var window = new ExportProgressWindow("Вход в TNovPRO", revitWindow, "Отмена");
+            try
+            {
+                window.SetStage("Проверяю вход в TNovPRO…");
+                window.Show();
+                var restore = Task.Run(() => session.TryRestoreSessionAsync());
+                if (!Wait(window, restore)) return null;
+                if (restore.Status == TaskStatus.RanToCompletion && restore.Result) return true;
+                if (restore.IsFaulted) PluginLog.Write("[UploadProject] вход (restore): " + restore.Exception?.GetBaseException().Message);
+
+                window.SetStage("Открылся браузер — войдите в TNovPRO и вернитесь в Revit…");
+                var browser = Task.Run(() => session.Browser.AuthorizeAsync(TimeSpan.FromMinutes(3)));
+                if (!Wait(window, browser)) return null;
+                if (browser.IsFaulted) PluginLog.Write("[UploadProject] вход (browser): " + browser.Exception?.GetBaseException().Message);
+                return browser.Status == TaskStatus.RanToCompletion && browser.Result;
+            }
+            finally
+            {
+                window.ForceClose();
+            }
+        }
+
+        /// <summary>Крутить окно, пока задача не кончится. false — нажали «Отмена».</summary>
+        private static bool Wait(ExportProgressWindow window, Task task)
+        {
+            while (!task.IsCompleted)
+            {
+                window.Pump();
+                if (window.CancelRequested) return false;
+                Thread.Sleep(50);
+            }
+            return true;
         }
 
         private static void TryDelete(string path)
